@@ -1,0 +1,3 @@
+[submodule "RIMS_tool"]
+	path = RIMS_tool
+	url = https://github.com/kenny2817/RIMS_tool.git
