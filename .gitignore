@@ -1,7 +1,8 @@
 .env
 
 ./output/
-./diagram_2/
+
+diagram_2/
 
 ignored/
 
