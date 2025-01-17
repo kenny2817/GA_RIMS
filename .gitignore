@@ -1,0 +1,8 @@
+.env
+
+./output/
+./diagram_2/
+
+ignored/
+
+Dockerfile

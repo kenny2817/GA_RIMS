@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import shutil
 import sys
 import json
 import matplotlib.pyplot as plt
@@ -14,11 +15,11 @@ from pymoo.core.crossover import Crossover
 
 from RIMS_tool.core.run_simulation import run_simulation
 
-# from pymoo.config import Config
-# Config.warnings['not_compiled'] = False
+from pymoo.config import Config
+Config.warnings['not_compiled'] = False
 
 def simulate(paths: dict[str:str], n_simulations: int):
-    with open("redirect.txt", "w") as file:
+    with open(paths["redirect"], "w") as file:
         # Save
         original_stderr = sys.stderr
         original_stdout = sys.stdout
@@ -195,18 +196,16 @@ def plot_results(solutions: list, file_name: str):
     plt.savefig(file_name)
     plt.close()
 
-def cleanup(directory_path: str):
+def cleanup_directory(directory_path: str):
     try:
-        if os.path.exists(directory_path) and os.path.isdir(directory_path):
-            for file_name in os.listdir(directory_path):
-                file_path = os.path.join(directory_path, file_name)
-                os.remove(file_path)
-        else:
-            print(f"The provided path '{directory_path}' is not a directory or does not exist.")
+        if os.path.exists(directory_path):
+            shutil.rmtree(directory_path)
+
+        os.makedirs(directory_path)
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def decision_activity_init(path: dict[str: str]):
+def decision_activity_init(path: dict[str: str]) -> list:
     map_decision_activity = []
     with open(path) as file:
         data = json.load(file)
@@ -215,6 +214,18 @@ def decision_activity_init(path: dict[str: str]):
             if isinstance(role, list):  # list assert
                 map_decision_activity.append(role)
     return map_decision_activity
+
+def final_cleanup(paths: dict[str: str]):
+    txt_file = paths["redirect"]
+    if os.path.exists(txt_file) and os.path.isfile(txt_file):
+            os.remove(txt_file)
+    
+    csv_folder = paths["output_folder"]
+    if os.path.exists(csv_folder) and os.path.isdir(csv_folder):
+        for file_name in os.listdir(csv_folder):
+            if file_name.endswith('.csv'):
+                file_path = os.path.join(csv_folder, file_name)
+                os.remove(file_path)
 
 if __name__ == "__main__":
 
@@ -227,10 +238,11 @@ if __name__ == "__main__":
         "output_folder_name": diagram_name,
         "output_folder": f"./output/output_{diagram_name}",
         "petrinet_file": f"./{diagram_name}/{diagram_name}.pnml",
-        "simulation_params": f"./{diagram_name}/{diagram_name}.json"
+        "simulation_params": f"./{diagram_name}/{diagram_name}.json",
+        "redirect": "./redirect.txt"
     }
 
-    cleanup(paths["output_folder"])
+    cleanup_directory(paths["output_folder"])
 
     map_decision_activity = decision_activity_init(paths["simulation_params"])
 
@@ -270,4 +282,6 @@ if __name__ == "__main__":
 
     plot_history(res, paths["progression"])
     plot_results(res.F, paths["results"])
+
+    final_cleanup(paths)
     
