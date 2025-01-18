@@ -4,6 +4,7 @@ import shutil
 import sys
 import json
 import matplotlib.pyplot as plt
+import time
 
 from pymoo.optimize import minimize
 from pymoo.termination import get_termination
@@ -13,25 +14,12 @@ from pymoo.core.sampling import Sampling
 from pymoo.core.mutation import Mutation
 from pymoo.core.crossover import Crossover
 
+from scipy.stats import trim_mean
+
 from RIMS_tool.core.run_simulation import run_simulation
 
 from pymoo.config import Config
 Config.warnings['not_compiled'] = False
-
-def simulate(paths: dict[str:str], n_simulations: int):
-    with open(paths["redirect"], "w") as file:
-        # Save
-        original_stderr = sys.stderr
-        original_stdout = sys.stdout
-        # Redirect
-        sys.stderr = file
-        sys.stdout = file
-        try:
-            run_simulation(paths["petrinet_file"], paths["simulation_params"], paths["jsonl"], n_simulations, num_traces, paths["output_folder_name"])
-        finally:
-            # Restore
-            sys.stdout = original_stdout
-            sys.stderr = original_stderr
 
 class ResourceAssignmentProblem(Problem):
     def __init__(self, map_decision_activity: list, num_traces: int, paths: dict[str: str], mutation_treshold: float, n_simulations: int):
@@ -71,54 +59,39 @@ class ResourceAssignmentProblem(Problem):
             resource_assignment.append(trace_assignment)
         
         return resource_assignment
-
-    def _fetch_results(self):
-        L = []
+    
+    def _simulate(self, x: list):
+        paths = self.paths
         n = self.n_simulations
-        jsonl = self.paths["jsonl"]
+        with open(paths["redirect"], "a") as file:
+            # Save
+            original_stderr = sys.stderr
+            original_stdout = sys.stdout
+            # Redirect
+            sys.stderr = file
+            sys.stdout = file
+            try:
+                res = run_simulation(paths["petrinet_file"], paths["simulation_params"], x, n, self.num_traces, paths["output_folder_name"])
+            finally:
+                # Restore
+                sys.stdout = original_stdout
+                sys.stderr = original_stderr
 
-        with open(jsonl, 'rb') as file:
-            file.seek(0, 2)
-            end = file.tell()
-            while len(L) <= n and end > 0:
-                file.seek(end - 1024 if end > 1024 else 0, 0)
-                L = file.read(end - file.tell()).splitlines()
-                end = file.tell()
+        duration, cost = zip(*res)
 
-        duration = 0
-        cost = 0
-
-        for line in L[-n:]:
-            line = line.decode()
-            line = json.loads(line)
-            results = line['results']
-            duration += float(results[0])
-            cost += float(results[1])
-
-        return [duration / n, cost / n]
-
-    def _evaluate(self, X: list, out, *args, **kwargs):
-        jsonl = self.paths["jsonl"]
-        output = { "iteration": self.iteration }
+        duration = trim_mean(duration, proportiontocut=0.025)
+        cost = trim_mean(cost, proportiontocut=0.025)
         
-        with open(jsonl, "a") as json_file:
-            json_file.write(json.dumps(output) + "\n")
+        return [duration, cost]
 
+    def _evaluate(self, X: list, out, *args, **kwargs):        
+        print("|", end="")
+        sys.stdout.flush()
         F = []
-        solutions = []
-        for i, x in enumerate(X):
-            solutions.append({
-                "solution_id": i,
-                "genes": x.tolist(),
-                "resource_assignment": self._decode(x)
-            })
-
-            with open(jsonl, "a") as json_file:
-                json_file.write(json.dumps(solutions[-1]) + "\n")
-
-            simulate(self.paths, self.n_simulations)
+        for x in X:
+            res = self._simulate(x)
             
-            F.append(self._fetch_results())
+            F.append(res)
 
         out["F"] = np.array(F)
         self.iteration += 1
@@ -229,10 +202,12 @@ def final_cleanup(paths: dict[str: str]):
 
 if __name__ == "__main__":
 
+    start_time = time.time()
+
+
     diagram_name = "diagram_2"
 
     paths = {
-        "jsonl": f"./output/output_{diagram_name}/communication.jsonl",
         "progression": f"./output/output_{diagram_name}/progession.png",
         "results": f"./output/output_{diagram_name}/results.png",
         "output_folder_name": diagram_name,
@@ -266,15 +241,21 @@ if __name__ == "__main__":
         eliminate_duplicates=True
     )
 
-    termination = get_termination("n_gen", 50)
+    n_gen = 50
+    termination = get_termination("n_gen", n_gen)
+    for _ in range(n_gen):
+        print("|", end="")
+    print("")
 
     res = minimize(
         problem,
         algorithm,
         termination,
-        verbose=True,
+        verbose=False,
         save_history=True
     )
+
+    print("")
 
     print(f"Best solutions found for {diagram_name}:")
     print("X:", res.X)
@@ -284,4 +265,10 @@ if __name__ == "__main__":
     plot_results(res.F, paths["results"])
 
     final_cleanup(paths)
+
+    end_time = time.time()  # Record the end time
+
+    execution_time = end_time - start_time
+    print(f"Execution time: {execution_time:.4f} seconds")
+
     
