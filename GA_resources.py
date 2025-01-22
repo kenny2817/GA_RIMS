@@ -1,32 +1,37 @@
-import numpy as np
+import numpy as np                              # type: ignore
 import os
 import shutil
+import threading
 import sys
 import json
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt                 # type: ignore
 import time
 
-from pymoo.optimize import minimize
-from pymoo.termination import get_termination
-from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.core.problem import Problem
-from pymoo.core.sampling import Sampling
-from pymoo.core.mutation import Mutation
-from pymoo.core.crossover import Crossover
+from pymoo.optimize import minimize             # type: ignore
+from pymoo.termination import get_termination   # type: ignore
+from pymoo.algorithms.moo.nsga2 import NSGA2    # type: ignore
+from pymoo.core.problem import Problem          # type: ignore
+from pymoo.core.sampling import Sampling        # type: ignore
+from pymoo.core.mutation import Mutation        # type: ignore
+from pymoo.core.crossover import Crossover      # type: ignore
 
-from scipy.stats import trim_mean
+from concurrent.futures import ProcessPoolExecutor
+
+from scipy.stats import trim_mean               # type: ignore
 
 from RIMS_tool.core.run_simulation import run_simulation
 
-from pymoo.config import Config
+from pymoo.config import Config                 # type: ignore
 Config.warnings['not_compiled'] = False
 
 class ResourceAssignmentProblem(Problem):
-    def __init__(self, map_decision_activity: list, num_traces: int, paths: dict[str: str], mutation_treshold: float, n_simulations: int):
+    def __init__(self, map_decision_activity: list, num_traces: int, paths: dict[str: str], mutation_treshold: float, n_simulations: int, n_process: int = 1):
         if num_traces < 1:
             raise ValueError('num_traces should be grater than 0')
         elif mutation_treshold < 0 or mutation_treshold > 1:
             raise ValueError('mutation_treshold should be [0,1]')
+        elif n_process < 1:
+            raise ValueError('number of threads should be equal or grater that 1')
         else:
             n_var = len(map_decision_activity) * num_traces
             n_obj = 2                                   # cost and time
@@ -40,7 +45,7 @@ class ResourceAssignmentProblem(Problem):
             self.map_decision_activity = map_decision_activity
             self.num_traces = num_traces
             self.n_simulations = n_simulations
-            self.iteration = 0
+            self.n_process = n_process
     
     def _decode(self, x: list):
         resource_assignment = []
@@ -62,8 +67,10 @@ class ResourceAssignmentProblem(Problem):
     
     def _simulate(self, x: list):
         paths = self.paths
-        n = self.n_simulations
-        with open(paths["redirect"], "a") as file:
+        n = int(self.n_simulations / self.n_process)
+        r = int(self.n_simulations % self.n_process)
+
+        with open(paths["redirect"], "w") as file:
             # Save
             original_stderr = sys.stderr
             original_stdout = sys.stdout
@@ -71,13 +78,25 @@ class ResourceAssignmentProblem(Problem):
             sys.stderr = file
             sys.stdout = file
             try:
-                res = run_simulation(paths["petrinet_file"], paths["simulation_params"], x, n, self.num_traces, paths["output_folder_name"])
+                with ProcessPoolExecutor(max_workers=self.n_process) as executor:
+                    futures = []
+                    
+                    for thread_id in range(self.n_process):
+                        cleanup_directory(paths["output_folder"] + "_thread_" + str(thread_id))
+                        future = executor.submit(run_simulation, paths["petrinet_file"], paths["simulation_params"], x, n + (1 if thread_id < r else 0), self.num_traces, paths["output_folder_name"] + "_thread_" + str(thread_id))
+                        futures.append(future)
+                # serial
+                # result = run_simulation(paths["petrinet_file"], paths["simulation_params"], x, n, self.num_traces, paths["output_folder_name"])
             finally:
                 # Restore
                 sys.stdout = original_stdout
                 sys.stderr = original_stderr
 
-        duration, cost = zip(*res)
+        result = []
+        for future in futures:
+            result += future.result() 
+
+        duration, cost = zip(*result)
 
         duration = trim_mean(duration, proportiontocut=0.025)
         cost = trim_mean(cost, proportiontocut=0.025)
@@ -85,8 +104,8 @@ class ResourceAssignmentProblem(Problem):
         return [duration, cost]
 
     def _evaluate(self, X: list, out, *args, **kwargs):        
-        print("|", end="")
-        sys.stdout.flush()
+        # print("|", end="")
+        # sys.stdout.flush()
         F = []
         for x in X:
             res = self._simulate(x)
@@ -94,7 +113,6 @@ class ResourceAssignmentProblem(Problem):
             F.append(res)
 
         out["F"] = np.array(F)
-        self.iteration += 1
 
 class IntegerRandomSampling(Sampling):
     def _do(self, problem, n_samples: int, **kwargs):
@@ -154,7 +172,7 @@ def plot_history(result, file_name: str, offset: int = 0):
     plt.ylabel("Objective Value")
     plt.title("Objective Value Progression")
     plt.legend()
-    plt.savefig(file_name)
+    plt.savefig(file_name + ".png")
     plt.close()
 
 def plot_results(solutions: list, file_name: str):
@@ -166,8 +184,8 @@ def plot_results(solutions: list, file_name: str):
     plt.xlabel("duration")
     plt.ylabel("cost")
     plt.grid(True)
-    plt.savefig(file_name)
-    plt.close()
+    plt.savefig(file_name + ".png")
+    plt.close('all')
 
 def cleanup_directory(directory_path: str):
     try:
@@ -182,56 +200,35 @@ def decision_activity_init(path: dict[str: str]) -> list:
     map_decision_activity = []
     with open(path) as file:
         data = json.load(file)
-        for elem in data['resource_table']:
+        for elem in data['tasks'].values():
             role = elem['role']
             if isinstance(role, list):  # list assert
                 map_decision_activity.append(role)
     return map_decision_activity
 
-def final_cleanup(paths: dict[str: str]):
+def final_cleanup(paths: dict[str: str], n_process: int):
     txt_file = paths["redirect"]
     if os.path.exists(txt_file) and os.path.isfile(txt_file):
             os.remove(txt_file)
     
-    csv_folder = paths["output_folder"]
-    if os.path.exists(csv_folder) and os.path.isdir(csv_folder):
-        for file_name in os.listdir(csv_folder):
-            if file_name.endswith('.csv'):
-                file_path = os.path.join(csv_folder, file_name)
-                os.remove(file_path)
+    for suffix in range(n_process):
+        folder = paths["output_folder"] + "_thread_" + str(suffix)
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
 
 if __name__ == "__main__":
-
-    start_time = time.time()
-
 
     diagram_name = "diagram_2"
 
     paths = {
-        "progression": f"./output/output_{diagram_name}/progession.png",
-        "results": f"./output/output_{diagram_name}/results.png",
+        "progression": f"./output/output_{diagram_name}/progession",
+        "results": f"./output/output_{diagram_name}/results",
         "output_folder_name": diagram_name,
         "output_folder": f"./output/output_{diagram_name}",
         "petrinet_file": f"./{diagram_name}/{diagram_name}.pnml",
         "simulation_params": f"./{diagram_name}/{diagram_name}.json",
         "redirect": "./redirect.txt"
     }
-
-    cleanup_directory(paths["output_folder"])
-
-    map_decision_activity = decision_activity_init(paths["simulation_params"])
-
-    num_traces = 30
-    mutation_treshold = 0.1
-    n_simulations = 4
-
-    problem = ResourceAssignmentProblem(
-        map_decision_activity, 
-        num_traces, 
-        paths, 
-        mutation_treshold, 
-        n_simulations
-    )
 
     algorithm = NSGA2(
         pop_size=20,
@@ -241,34 +238,55 @@ if __name__ == "__main__":
         eliminate_duplicates=True
     )
 
-    n_gen = 50
+    map_decision_activity = decision_activity_init(paths["simulation_params"])
+
+    num_traces = 30
+    mutation_treshold = 0.1
+    n_simulations = 100
+    n_gen = 30
+    n_sim = 5
     termination = get_termination("n_gen", n_gen)
-    for _ in range(n_gen):
-        print("|", end="")
-    print("")
 
-    res = minimize(
-        problem,
-        algorithm,
-        termination,
-        verbose=False,
-        save_history=True
-    )
+    cleanup_directory(paths["output_folder"])
 
-    print("")
+    for n_process in range(1,16):
+        mean = 0
+        for sim in range(n_sim):
+            start_time = time.time()
 
-    print(f"Best solutions found for {diagram_name}:")
-    print("X:", res.X)
-    print("F:", res.F)
 
-    plot_history(res, paths["progression"])
-    plot_results(res.F, paths["results"])
+            problem = ResourceAssignmentProblem(
+                map_decision_activity, 
+                num_traces, 
+                paths, 
+                mutation_treshold, 
+                n_simulations,
+                n_process
+            )
 
-    final_cleanup(paths)
+            # for _ in range(n_gen):
+            #     print("|", end="")
+            # print("")
 
-    end_time = time.time()  # Record the end time
+            res = minimize(
+                problem,
+                algorithm,
+                termination,
+                verbose=False,
+                save_history=True
+            )
 
-    execution_time = end_time - start_time
-    print(f"Execution time: {execution_time:.4f} seconds")
+            # print("")
 
+            plot_history(res, paths["progression"] + f"_{n_process}_{sim}")
+            plot_results(res.F, paths["results"] + f"_{n_process}_{sim}")
+
+
+            end_time = time.time()
+            execution_time = end_time - start_time
+            print(f"nth: {n_process} Execution time: {execution_time:.4f} seconds")
+
+            mean += execution_time
+        print(f"nth: {n_process} mean: {mean / n_sim:.4f}")
+        final_cleanup(paths, n_process)
     
