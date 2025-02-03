@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     cleanup_directory(paths["output_folder"])
 
-    for n_process in range(1,16):
+    for n_process in range(5,8):
         mean = 0
         for sim in range(n_sim):
             start_time = time.time()
