@@ -33,8 +33,12 @@ class Task_profile(object):
     def get_roles(self) -> List[str]:
         return self.roles
 
-    def get_attribute(self, attr: str) -> Union[Any, None]:
+    def get_attribute(self, attr: str):
         return self.attributes.get(attr, None)
+    
+
+    def get_attributes(self):
+        return self.attributes
     
     def get_leaves(self) -> int:
         return self.leaves
@@ -142,7 +146,7 @@ class Tasks(dict):
             self.upper_bound_values = []
 
             for task_name, task_data in self.items():
-                if task_data.get_iscore() and task_data.get_leaves() > 1:
+                if task_data.get_leaves() > 1:
                     self.upper_bound_names.append(task_name)
                     self.upper_bound_values.append(task_data.get_leaves())
 
