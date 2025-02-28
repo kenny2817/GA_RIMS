@@ -14,7 +14,8 @@ from Bpmn import Bpmn
 from RIMS_tool.core.run_simulation import run_simulation
 
 from pymoo.optimize import minimize             # type: ignore
-from pymoo.termination import get_termination   # type: ignore
+# from pymoo.termination import get_termination   # type: ignore
+from pymoo.termination.default import DefaultMultiObjectiveTermination # type: ignore
 from pymoo.algorithms.moo.nsga2 import NSGA2    # type: ignore
 from pymoo.core.problem import Problem          # type: ignore
 from pymoo.core.sampling import Sampling        # type: ignore
@@ -30,15 +31,15 @@ class GA_RA_PST_Problem(Problem):
             # process: Process,
             number_traces: int = 1,
             number_simulations: int = 1,
-            number_processes: int = 1,
+            # number_processes: int = 1,
             mutation_threshold: float = 0.1,
             mutation_proportion: float = 0.01,
         ):
 
         if number_traces < 1:
             raise ValueError('number of traces should be equal or grater than 1')
-        if number_processes < 1:
-            raise ValueError('number of threads should be equal or grater than 1')
+        # if number_processes < 1:
+        #     raise ValueError('number of threads should be equal or grater than 1')
         if number_simulations < 1:
             raise ValueError('number of simulations should be equal or greater than 1')
         if not (0 <= mutation_threshold <= 1):
@@ -46,7 +47,7 @@ class GA_RA_PST_Problem(Problem):
         
         self.number_traces = number_traces
         self.number_simulations = number_simulations
-        self.number_processes = number_processes
+        # self.number_processes = number_processes
         self.mutation_threshold = mutation_threshold
         self.mutation_proportion = mutation_proportion
         
@@ -123,8 +124,8 @@ class GA_RA_PST_Problem(Problem):
         paths = self.paths
         population_size = X.shape[0]
         proportion_to_cut = 0.025
-        n = population_size // self.number_processes
-        r = population_size % self.number_processes
+        # n = population_size // self.number_processes
+        # r = population_size % self.number_processes
 
         params = {
             "PATH_PETRINET": paths["petrinet_file"],
@@ -135,7 +136,8 @@ class GA_RA_PST_Problem(Problem):
 
         futures = []
         F = []
-        with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
+        # with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
+        with ProcessPoolExecutor() as executor:
             for index in range(population_size):
                 params["GENE"] = X[index]
                 params["NAME"] = paths["diagram_name"] + f"_index_{index}"
@@ -208,6 +210,19 @@ class CustomCrossover(Crossover):
         
         return offsprings
 
+def plot_pareto(res, problem, file_name: str):
+    F = res.F
+    pf_a, pf_b = problem.pareto_front(use_cache=False, flatten=False)
+
+    plt.figure(figsize=(7, 5))
+    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors='none', edgecolors='b', label="Solutions")
+    plt.plot(pf_a[:, 0], pf_a[:, 1], alpha=0.5, linewidth=2.0, color="red", label="Pareto-front")
+    plt.plot(pf_b[:, 0], pf_b[:, 1], alpha=0.5, linewidth=2.0, color="red")
+    plt.title("Objective Space")
+    plt.legend()
+    plt.savefig(file_name + ".png")
+    plt.close()
+
 def plot_history(result, file_name: str, offset: int = 0):
     history = [algo.pop.get("F") for algo in result.history]
 
@@ -234,7 +249,9 @@ def plot_history(result, file_name: str, offset: int = 0):
     plt.legend()
     plt.savefig(file_name + ".png")
     plt.close()
-def plot_results(solutions: list, file_name: str):
+    
+def plot_results(result, file_name: str):
+    solutions = result.F
     x, y = zip(*solutions)
 
     plt.figure(figsize=(12, 7))
@@ -297,56 +314,57 @@ if __name__ == "__main__":
     parameters.add_mapping(bpmn)
     parameters.save(paths["simulation_params"])
 
-    population_size = 200
-    # number_traces = 100
+    population_size = int(sys.argv[1])
+    number_traces = int(sys.argv[2])
     number_simulations = 10
-    # n_gen = 30
-    number_processes = 10
+    # number_processes = 10
 
-    for n_gen in range(200, 201, 30):
-        termination = get_termination("n_gen", n_gen)
-        for number_traces in range(20, 101, 100):
-            problem = GA_RA_PST_Problem(
-                paths=paths,
-                bpmn=bpmn,
-                # process=process,
-                number_traces=number_traces,
-                number_simulations=number_simulations,
-                number_processes=number_processes,
-                mutation_threshold=0.1,
-                mutation_proportion=0.1
-            )
 
-            algorithm = NSGA2(
-                pop_size=population_size,
-                sampling=IntegerRandomSampling(),
-                crossover=CustomCrossover(),
-                mutation=CustomMutation(),
-                eliminate_duplicates=True
-            )
+    termination = DefaultMultiObjectiveTermination(
+        xtol=1e-8,
+        cvtol=1e-6,
+        ftol=0.0025,
+        period=30,
+        n_max_gen=100,
+        n_max_evals=100000
+    )
 
-            # cleanup_directory(paths["output_folder"])
-            
-            res = minimize(
-                problem,
-                algorithm,
-                termination,
-                verbose=True,
-                save_history=True
-            )
+    problem = GA_RA_PST_Problem(
+        paths=paths,
+        bpmn=bpmn,
+        # process=process,
+        number_traces=number_traces,
+        number_simulations=number_simulations,
+        # number_processes=number_processes,
+        mutation_threshold=0.1,
+        mutation_proportion=0.1
+    )
 
-            with open("simulation_time_1.txt", "a") as file: 
-                file.write(f"prc: {number_processes} trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}\n")
-            print(f"prc: {number_processes} trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}")
+    algorithm = NSGA2(
+        pop_size=population_size,
+        sampling=IntegerRandomSampling(),
+        crossover=CustomCrossover(),
+        mutation=CustomMutation(),
+        eliminate_duplicates=True
+    )
 
-            plot_history(res, paths["progression"] + f"_{number_processes}_{number_traces}")
-            plot_results(res.F, paths["results"] + f"_{number_processes}_{number_traces}")
-            # plot_pareto(res, paths["pareto"] + f"{number_processes}_{number_traces}")
+    # cleanup_directory(paths["output_folder"])
+    
+    res = minimize(
+        problem,
+        algorithm,
+        termination,
+        verbose=True,
+        save_history=True
+    )
 
-    # plot_history(res, paths["progression"])
-    # plot_results(res.F, paths["results"])
+    n_gen = len(res.history)
+    with open("simulation_time.txt", "a") as file: 
+        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}\n")
+    print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}")
+
+    plot_history(res, paths["progression"] + f"_{population_size}_{number_traces}")
+    plot_results(res, paths["results"] + f"_{population_size}_{number_traces}")
 
     final_cleanup(paths, population_size)
-    # final_cleanup(paths, 100)
 
-    # print(f"processes: {number_processes} time: {end_time - start_time}")
