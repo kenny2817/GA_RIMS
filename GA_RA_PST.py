@@ -14,7 +14,6 @@ from Bpmn import Bpmn
 from RIMS_tool.core.run_simulation import run_simulation
 
 from pymoo.optimize import minimize             # type: ignore
-# from pymoo.termination import get_termination   # type: ignore
 from pymoo.termination.default import DefaultMultiObjectiveTermination # type: ignore
 from pymoo.algorithms.moo.nsga2 import NSGA2    # type: ignore
 from pymoo.core.problem import Problem          # type: ignore
@@ -228,7 +227,6 @@ def plot_history(result, file_name: str, offset: int = 0):
     plt.legend()
     plt.savefig(file_name + ".png")
     plt.close()
-    
 def plot_results(result, file_name: str):
     solutions = result.F
     x, y = zip(*solutions)
@@ -241,6 +239,7 @@ def plot_results(result, file_name: str):
     plt.grid(True)
     plt.savefig(file_name + ".png")
     plt.close('all')
+
 def cleanup_directory(directory_path: str):
     try:
         if os.path.exists(directory_path):
