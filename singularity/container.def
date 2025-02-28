@@ -1,0 +1,26 @@
+Bootstrap: docker
+From: python:3.11
+
+%post
+    pip install --no-cache-dir \
+        scikit-learn==1.2.1 \
+        scipy==1.11.2 \
+        simpy==4.0.1 \
+        pm4py==2.7.5.2 \
+        statsmodels==0.14.0 \
+        pandas==1.5.3
+
+    git clone --branch 0.6.0 https://github.com/anyoptimization/pymoo /pymoo
+    cd /pymoo && make compile
+    pip install .
+
+%environment
+    # (Optional) Set environment variables if needed
+    export LC_ALL=C
+
+%runscript
+    cd /app || exit 1
+    exec python3 GA_RA_PST.py
+
+%labels
+    Author Quentin

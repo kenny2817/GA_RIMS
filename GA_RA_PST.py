@@ -23,6 +23,7 @@ from pymoo.core.mutation import Mutation        # type: ignore
 from pymoo.core.crossover import Crossover      # type: ignore
 from pymoo.config import Config                 # type: ignore
 Config.warnings['not_compiled'] = False
+
 class GA_RA_PST_Problem(Problem):
     def __init__(
             self,
@@ -302,40 +303,33 @@ if __name__ == "__main__":
     petrinet = PetriNet(paths["bpmn_file"])
     petrinet.save_net(paths["petrinet_file"])
 
-    # process = Process(paths["input_params"])
-    # process.compute_decision_tree()
-    # process.debug()
-
     bpmn = Bpmn(paths["bpmn_file"])
-    # bpmn.set_core_tasks(process.get_tasks())
 
     parameters = Parameters(paths["input_params"])
-    # parameters.add_tasks(process.get_tasks())
     parameters.add_mapping(bpmn)
     parameters.save(paths["simulation_params"])
 
     population_size = int(sys.argv[1])
     number_traces = int(sys.argv[2])
-    number_simulations = 10
-    # number_processes = 10
+    plot_id = sys.argv[3]
+    ftol = float(sys.argv[4])
 
+    number_simulations = 10
 
     termination = DefaultMultiObjectiveTermination(
         xtol=1e-8,
         cvtol=1e-6,
-        ftol=0.0025,
+        ftol=ftol,
         period=30,
-        n_max_gen=100,
-        n_max_evals=100000
+        n_max_gen=10000,
+        n_max_evals=1000000
     )
 
     problem = GA_RA_PST_Problem(
         paths=paths,
         bpmn=bpmn,
-        # process=process,
         number_traces=number_traces,
         number_simulations=number_simulations,
-        # number_processes=number_processes,
         mutation_threshold=0.1,
         mutation_proportion=0.1
     )
@@ -347,24 +341,22 @@ if __name__ == "__main__":
         mutation=CustomMutation(),
         eliminate_duplicates=True
     )
-
-    # cleanup_directory(paths["output_folder"])
     
     res = minimize(
         problem,
         algorithm,
         termination,
-        verbose=True,
+        verbose=False,
         save_history=True
     )
 
     n_gen = len(res.history)
     with open("simulation_time.txt", "a") as file: 
-        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}\n")
-    print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} time: {res.exec_time}")
+        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}\n")
+    print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}")
 
-    plot_history(res, paths["progression"] + f"_{population_size}_{number_traces}")
-    plot_results(res, paths["results"] + f"_{population_size}_{number_traces}")
+    plot_history(res, paths["progression"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
+    plot_results(res, paths["results"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
 
     final_cleanup(paths, population_size)
 
