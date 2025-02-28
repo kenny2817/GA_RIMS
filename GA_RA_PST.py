@@ -29,18 +29,14 @@ class GA_RA_PST_Problem(Problem):
             self,
             paths: Dict[str, str],
             bpmn: Bpmn,
-            # process: Process,
             number_traces: int = 1,
             number_simulations: int = 1,
-            # number_processes: int = 1,
             mutation_threshold: float = 0.1,
             mutation_proportion: float = 0.01,
         ):
 
         if number_traces < 1:
             raise ValueError('number of traces should be equal or grater than 1')
-        # if number_processes < 1:
-        #     raise ValueError('number of threads should be equal or grater than 1')
         if number_simulations < 1:
             raise ValueError('number of simulations should be equal or greater than 1')
         if not (0 <= mutation_threshold <= 1):
@@ -48,7 +44,6 @@ class GA_RA_PST_Problem(Problem):
         
         self.number_traces = number_traces
         self.number_simulations = number_simulations
-        # self.number_processes = number_processes
         self.mutation_threshold = mutation_threshold
         self.mutation_proportion = mutation_proportion
         
@@ -72,7 +67,6 @@ class GA_RA_PST_Problem(Problem):
 
         self.paths = paths
         self.bpmn = bpmn
-        # self.process = process
 
         # self.gen = 0
 
@@ -125,8 +119,6 @@ class GA_RA_PST_Problem(Problem):
         paths = self.paths
         population_size = X.shape[0]
         proportion_to_cut = 0.025
-        # n = population_size // self.number_processes
-        # r = population_size % self.number_processes
 
         params = {
             "PATH_PETRINET": paths["petrinet_file"],
@@ -137,7 +129,6 @@ class GA_RA_PST_Problem(Problem):
 
         futures = []
         F = []
-        # with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
         with ProcessPoolExecutor() as executor:
             for index in range(population_size):
                 params["GENE"] = X[index]
@@ -210,19 +201,6 @@ class CustomCrossover(Crossover):
             offsprings[1, k, :] = offspring2
         
         return offsprings
-
-def plot_pareto(res, problem, file_name: str):
-    F = res.F
-    pf_a, pf_b = problem.pareto_front(use_cache=False, flatten=False)
-
-    plt.figure(figsize=(7, 5))
-    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors='none', edgecolors='b', label="Solutions")
-    plt.plot(pf_a[:, 0], pf_a[:, 1], alpha=0.5, linewidth=2.0, color="red", label="Pareto-front")
-    plt.plot(pf_b[:, 0], pf_b[:, 1], alpha=0.5, linewidth=2.0, color="red")
-    plt.title("Objective Space")
-    plt.legend()
-    plt.savefig(file_name + ".png")
-    plt.close()
 
 def plot_history(result, file_name: str, offset: int = 0):
     history = [algo.pop.get("F") for algo in result.history]
