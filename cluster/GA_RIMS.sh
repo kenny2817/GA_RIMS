@@ -7,4 +7,4 @@
 
 module load singularity-3.4.0
 
-singularity exec --bind ~/$folder/:/data --pwd /data ~/$folder/singularity/test_0.sif python3 /data/GA_RA_PST.py $population_size $number_traces $id $ftol
+singularity exec --bind ~/$folder/:/data --pwd /data ~/cluster/singularity/container.sif python3 /data/core/GA_RA_PST.py $population_size $number_traces $id $ftol
