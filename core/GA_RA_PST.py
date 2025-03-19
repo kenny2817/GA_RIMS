@@ -82,7 +82,7 @@ class GA_RA_PST_Problem(Problem):
                 # Redirect
                 sys.stderr = file
                 sys.stdout = file
-                with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
+                with ProcessPoolExecutor(max_workers=1) as executor:
                     params = {
                         "PATH_PETRINET": paths["petrinet_file"],
                         "PATH_PARAMETERS": paths["simulation_params"],
@@ -323,7 +323,7 @@ if __name__ == "__main__":
         problem,
         algorithm,
         termination,
-        verbose=False,
+        verbose=True,
         save_history=True
     )
 
