@@ -14,7 +14,6 @@ from Bpmn import Bpmn
 from RIMS_tool.core.run_simulation import run_simulation
 
 from pymoo.optimize import minimize             # type: ignore
-# from pymoo.termination import get_termination   # type: ignore
 from pymoo.termination.default import DefaultMultiObjectiveTermination # type: ignore
 from pymoo.algorithms.moo.nsga2 import NSGA2    # type: ignore
 from pymoo.core.problem import Problem          # type: ignore
@@ -28,18 +27,14 @@ class GA_RA_PST_Problem(Problem):
             self,
             paths: Dict[str, str],
             bpmn: Bpmn,
-            # process: Process,
             number_traces: int = 1,
             number_simulations: int = 1,
-            # number_processes: int = 1,
             mutation_threshold: float = 0.1,
             mutation_proportion: float = 0.01,
         ):
 
         if number_traces < 1:
             raise ValueError('number of traces should be equal or grater than 1')
-        # if number_processes < 1:
-        #     raise ValueError('number of threads should be equal or grater than 1')
         if number_simulations < 1:
             raise ValueError('number of simulations should be equal or greater than 1')
         if not (0 <= mutation_threshold <= 1):
@@ -47,7 +42,6 @@ class GA_RA_PST_Problem(Problem):
         
         self.number_traces = number_traces
         self.number_simulations = number_simulations
-        # self.number_processes = number_processes
         self.mutation_threshold = mutation_threshold
         self.mutation_proportion = mutation_proportion
         
@@ -71,61 +65,11 @@ class GA_RA_PST_Problem(Problem):
 
         self.paths = paths
         self.bpmn = bpmn
-        # self.process = process
-
-        # self.gen = 0
-
-    def _simulate(self, x: List):
-        paths = self.paths
-        n = int(self.number_simulations // self.number_processes)
-        r = int(self.number_simulations % self.number_processes)
-
-        with open(paths["redirect"], "w") as file:
-            # Save
-            original_stderr = sys.stderr
-            original_stdout = sys.stdout
-            try:
-                # Redirect
-                sys.stderr = file
-                sys.stdout = file
-                with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
-                    params = {
-                        "PATH_PETRINET": paths["petrinet_file"],
-                        "PATH_PARAMETERS": paths["simulation_params"],
-                        "GENE": x,
-                        "N_TRACES": self.number_traces
-                    }
-                    futures = []
-                    
-                    for thread_id in range(self.number_processes):
-                        params["N_SIMULATION"] = n + (1 if thread_id < r else 0)
-                        params["NAME"] = paths["diagram_name"] + "_thread_" + str(thread_id)
-                        cleanup_directory(paths["output_folder"] + "_thread_" + str(thread_id))
-                        future = executor.submit(run_simulation, **params)
-                        futures.append(future)
-            finally:
-                # Restore
-                sys.stdout = original_stdout
-                sys.stderr = original_stderr
-
-        result = []
-        for future in futures:
-            result += future.result() 
-
-        duration, cost = zip(*result)
-
-        proportiontocut = 0.025
-        duration = trim_mean(duration, proportiontocut=proportiontocut)
-        cost = trim_mean(cost, proportiontocut=proportiontocut)
-        
-        return [duration, cost]
 
     def _evaluate(self, X: list, out, *args, **kwargs):
         paths = self.paths
         population_size = X.shape[0]
         proportion_to_cut = 0.025
-        # n = population_size // self.number_processes
-        # r = population_size % self.number_processes
 
         params = {
             "PATH_PETRINET": paths["petrinet_file"],
@@ -136,7 +80,6 @@ class GA_RA_PST_Problem(Problem):
 
         futures = []
         F = []
-        # with ProcessPoolExecutor(max_workers=self.number_processes) as executor:
         with ProcessPoolExecutor() as executor:
             for index in range(population_size):
                 params["GENE"] = X[index]
@@ -154,9 +97,6 @@ class GA_RA_PST_Problem(Problem):
 
         out["F"] = np.array(F)
 
-        # plot_results(out["F"], self.paths["pareto"] + f"_gen_{self.gen}")
-        # self.gen += 1
-
 class IntegerRandomSampling(Sampling):
     def _do(self, problem, n_samples: int, **kwargs):
         return np.random.randint(
@@ -165,18 +105,6 @@ class IntegerRandomSampling(Sampling):
             size=(n_samples, problem.n_var)
         )
 class CustomMutation(Mutation):
-    # def _do(self, problem, X, **kwargs):
-    #     n, m = X.shape
-    #     for i in range(n):
-    #         if np.random.rand() < problem.mutation_threshold:
-    #             j = np.random.randint(0, m)
-    #             old_val = X[i, j]
-    #             bounds = int(problem.xl[j]), int(problem.xu[j]) +1
-    #             new_val = np.random.randint(*bounds)
-    #             while new_val == old_val:
-    #                 new_val = np.random.randint(*bounds)
-    #             X[i, j] = new_val
-    #     return X
     
     def _do(self, problem, X, **kwargs):
         n, m = X.shape
@@ -302,23 +230,15 @@ if __name__ == "__main__":
     petrinet = PetriNet(paths["bpmn_file"])
     petrinet.save_net(paths["petrinet_file"])
 
-    # process = Process(paths["input_params"])
-    # process.compute_decision_tree()
-    # process.debug()
-
     bpmn = Bpmn(paths["bpmn_file"])
-    # bpmn.set_core_tasks(process.get_tasks())
 
     parameters = Parameters(paths["input_params"])
-    # parameters.add_tasks(process.get_tasks())
     parameters.add_mapping(bpmn)
     parameters.save(paths["simulation_params"])
 
     population_size = int(sys.argv[1])
     number_traces = int(sys.argv[2])
     number_simulations = 10
-    # number_processes = 10
-
 
     termination = DefaultMultiObjectiveTermination(
         xtol=1e-8,
@@ -332,10 +252,8 @@ if __name__ == "__main__":
     problem = GA_RA_PST_Problem(
         paths=paths,
         bpmn=bpmn,
-        # process=process,
         number_traces=number_traces,
         number_simulations=number_simulations,
-        # number_processes=number_processes,
         mutation_threshold=0.1,
         mutation_proportion=0.1
     )
@@ -347,8 +265,6 @@ if __name__ == "__main__":
         mutation=CustomMutation(),
         eliminate_duplicates=True
     )
-
-    # cleanup_directory(paths["output_folder"])
     
     res = minimize(
         problem,
