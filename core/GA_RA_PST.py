@@ -67,53 +67,6 @@ class GA_RA_PST_Problem(Problem):
         self.paths = paths
         self.bpmn = bpmn
 
-        # self.gen = 0
-
-    def _simulate(self, x: List):
-        paths = self.paths
-        n = int(self.number_simulations // self.number_processes)
-        r = int(self.number_simulations % self.number_processes)
-
-        with open(paths["redirect"], "w") as file:
-            # Save
-            original_stderr = sys.stderr
-            original_stdout = sys.stdout
-            try:
-                # Redirect
-                sys.stderr = file
-                sys.stdout = file
-                with ProcessPoolExecutor(max_workers=1) as executor:
-                    params = {
-                        "PATH_PETRINET": paths["petrinet_file"],
-                        "PATH_PARAMETERS": paths["simulation_params"],
-                        "GENE": x,
-                        "N_TRACES": self.number_traces
-                    }
-                    futures = []
-                    
-                    for thread_id in range(self.number_processes):
-                        params["N_SIMULATION"] = n + (1 if thread_id < r else 0)
-                        params["NAME"] = paths["diagram_name"] + "_thread_" + str(thread_id)
-                        cleanup_directory(paths["output_folder"] + "_thread_" + str(thread_id))
-                        future = executor.submit(run_simulation, **params)
-                        futures.append(future)
-            finally:
-                # Restore
-                sys.stdout = original_stdout
-                sys.stderr = original_stderr
-
-        result = []
-        for future in futures:
-            result += future.result() 
-
-        duration, cost = zip(*result)
-
-        proportiontocut = 0.025
-        duration = trim_mean(duration, proportiontocut=proportiontocut)
-        cost = trim_mean(cost, proportiontocut=proportiontocut)
-        
-        return [duration, cost]
-
     def _evaluate(self, X: list, out, *args, **kwargs):
         paths = self.paths
         population_size = X.shape[0]
@@ -145,9 +98,6 @@ class GA_RA_PST_Problem(Problem):
 
         out["F"] = np.array(F)
 
-        # plot_results(out["F"], self.paths["pareto"] + f"_gen_{self.gen}")
-        # self.gen += 1
-
 class IntegerRandomSampling(Sampling):
     def _do(self, problem, n_samples: int, **kwargs):
         return np.random.randint(
@@ -156,19 +106,6 @@ class IntegerRandomSampling(Sampling):
             size=(n_samples, problem.n_var)
         )
 class CustomMutation(Mutation):
-    # def _do(self, problem, X, **kwargs):
-    #     n, m = X.shape
-    #     for i in range(n):
-    #         if np.random.rand() < problem.mutation_threshold:
-    #             j = np.random.randint(0, m)
-    #             old_val = X[i, j]
-    #             bounds = int(problem.xl[j]), int(problem.xu[j]) +1
-    #             new_val = np.random.randint(*bounds)
-    #             while new_val == old_val:
-    #                 new_val = np.random.randint(*bounds)
-    #             X[i, j] = new_val
-    #     return X
-    
     def _do(self, problem, X, **kwargs):
         n, m = X.shape
         for i in range(n):
@@ -232,6 +169,7 @@ def plot_results(result, file_name: str):
     x, y = zip(*solutions)
 
     plt.figure(figsize=(12, 7))
+    plt.plot(x, y, color='b', linestyle='-', marker='o', alpha=0.7, label="Path")
     plt.scatter(x, y, color='r')
     plt.title("Best solutions")
     plt.xlabel("duration")
@@ -328,9 +266,13 @@ if __name__ == "__main__":
     )
 
     n_gen = len(res.history)
+    solutions = res.F
+    x, y = zip(*solutions)
+    results = [[x[i], y[i]] for i in range(len(x))]
+
     with open("simulation_time.txt", "a") as file: 
-        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}\n")
-    print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}")
+        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} results: {results}\n")
+    # print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}")
 
     plot_history(res, paths["progression"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
     plot_results(res, paths["results"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
