@@ -138,19 +138,6 @@ class CustomCrossover(Crossover):
         
         return offsprings
 
-def plot_pareto(res, problem, file_name: str):
-    F = res.F
-    pf_a, pf_b = problem.pareto_front(use_cache=False, flatten=False)
-
-    plt.figure(figsize=(7, 5))
-    plt.scatter(F[:, 0], F[:, 1], s=30, facecolors='none', edgecolors='b', label="Solutions")
-    plt.plot(pf_a[:, 0], pf_a[:, 1], alpha=0.5, linewidth=2.0, color="red", label="Pareto-front")
-    plt.plot(pf_b[:, 0], pf_b[:, 1], alpha=0.5, linewidth=2.0, color="red")
-    plt.title("Objective Space")
-    plt.legend()
-    plt.savefig(file_name + ".png")
-    plt.close()
-
 def plot_history(result, file_name: str, offset: int = 0):
     history = [algo.pop.get("F") for algo in result.history]
 
@@ -176,13 +163,13 @@ def plot_history(result, file_name: str, offset: int = 0):
     plt.title("Objective Value Progression")
     plt.legend()
     plt.savefig(file_name + ".png")
-    plt.close()
-    
+    plt.close() 
 def plot_results(result, file_name: str):
     solutions = result.F
     x, y = zip(*solutions)
 
     plt.figure(figsize=(12, 7))
+    plt.plot(x, y, color='b', linestyle='-', marker='o', alpha=0.7, label="Path")
     plt.scatter(x, y, color='r')
     plt.title("Best solutions")
     plt.xlabel("duration")
