@@ -166,7 +166,8 @@ def plot_history(result, file_name: str, offset: int = 0):
     plt.close()
 def plot_results(result, file_name: str):
     solutions = result.F
-    x, y = zip(*solutions)
+    sorted_solutions = sorted(solutions, key=lambda p: (-p[1], p[0]))
+    x, y = zip(*sorted_solutions)
 
     plt.figure(figsize=(12, 7))
     plt.plot(x, y, color='b', linestyle='-', marker='o', alpha=0.7, label="Path")
