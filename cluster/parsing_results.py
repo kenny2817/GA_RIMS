@@ -38,13 +38,35 @@ def plot_results(key, data, file_name="results_plot"):
 
     plt.figure(figsize=(12, 9))
     plt.scatter(x, y, color="red")
-    plt.title(f"Optimization Results pop: {key[0]}, trc: {key[1]}, ftol: {key[2]}")
+    plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
     plt.xlabel("Duration")
     plt.ylabel("Cost")
     plt.grid(True)
     plt.legend([legend_text], loc="upper right", fontsize=10, frameon=True)
     plt.savefig(file_name + ".png")
     plt.close()
+
+def plot_result_analysis(data, file_name="relust_analysis"):
+    considered_results = []
+    for key, results in data.items():
+        if key[1] == 50 and key[2] == 2.5e-05:
+            considered_results.append((key[0], round(results["generations"]/results["count"], 2), round(results["time"]/results["count"], 2)))
+
+    sorted_considered_results = sorted(considered_results, key=lambda p: p[0])
+
+    trc, gen, time = zip(*sorted_considered_results)
+
+    plt.figure(figsize=(12, 9))
+    plt.plot(trc, gen, color="blue", label="gen")
+    plt.yscale('log')
+    plt.plot(trc, time, color="red", label="time [s]")
+    plt.title(f"Analysis of pop: 50 ftol: 2.5e-05")
+    plt.xlabel("traces")
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(file_name + ".png")
+    plt.close()
+
 
 log_file = sys.argv[1]
 with open(log_file, "r") as f:
@@ -53,3 +75,5 @@ with open(log_file, "r") as f:
 parsed_data = parse_log(log_lines)
 for key, data in parsed_data.items():
     plot_results(key, data, f"cluster/parsed_results/parsed_data_{key}")
+
+plot_result_analysis(parsed_data, f"cluster/parsed_results/result_analysis")
