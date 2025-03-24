@@ -3,13 +3,11 @@ import os
 import shutil
 import sys
 import numpy as np                              # type: ignore
-import matplotlib.pyplot as plt                 # type: ignore
 from typing import Dict, List
 from scipy.stats import trim_mean               # type: ignore
 
 from PetriNet import PetriNet
 from Parameters import Parameters
-from Process import Process
 from Bpmn import Bpmn
 from RIMS_tool.core.run_simulation import run_simulation
 
@@ -138,47 +136,6 @@ class CustomCrossover(Crossover):
         
         return offsprings
 
-def plot_history(result, file_name: str, offset: int = 0):
-    history = [algo.pop.get("F") for algo in result.history]
-
-    min_duration = []
-    max_duration = []
-    min_cost = []
-    max_cost = []
-    for i, gen in enumerate(history): 
-        if i >= offset:
-            min_duration.append(np.min(gen[:,0]))
-            max_duration.append(np.max(gen[:,0]))
-            min_cost.append(np.min(gen[:,1]))
-            max_cost.append(np.max(gen[:,1]))
-
-    plt.figure(figsize=(12, 7))
-    plt.yscale('log')
-    plt.plot(min_duration, label="Best duration", color='#90EE90')
-    plt.plot(max_duration, label="Worst duration", color='#006400')
-    plt.plot(min_cost, label="Best cost", color="#ADD8E6")
-    plt.plot(max_cost, label="worst cost", color="#00008B")
-    plt.xlabel("Generation")
-    plt.ylabel("Objective Value")
-    plt.title("Objective Value Progression")
-    plt.legend()
-    plt.savefig(file_name + ".png")
-    plt.close()
-def plot_results(result, file_name: str):
-    solutions = result.F
-    sorted_solutions = sorted(solutions, key=lambda p: (-p[1], p[0]))
-    x, y = zip(*sorted_solutions)
-
-    plt.figure(figsize=(12, 7))
-    plt.plot(x, y, color='b', linestyle='-', marker='o', alpha=0.7, label="Path")
-    plt.scatter(x, y, color='r')
-    plt.title("Best solutions")
-    plt.xlabel("duration")
-    plt.ylabel("cost")
-    plt.grid(True)
-    plt.savefig(file_name + ".png")
-    plt.close('all')
-
 def cleanup_directory(directory_path: str):
     try:
         if os.path.exists(directory_path):
@@ -204,9 +161,6 @@ if __name__ == "__main__":
     paths = {
         "diagram_name": diagram_name,
         "output_folder": output_folder,
-        "results": f"{output_folder}/results",
-        "progression": f"{output_folder}/progession",
-        "pareto": f"{output_folder}/pareto",
         "redirect": f"{output_folder}/redirect.txt",
         "output_folder_name": diagram_name,
         "diagram_folder_file": diagram_folder_file,
@@ -262,7 +216,7 @@ if __name__ == "__main__":
         problem,
         algorithm,
         termination,
-        verbose=True,
+        verbose=False,
         save_history=True
     )
 
@@ -273,10 +227,6 @@ if __name__ == "__main__":
 
     with open("simulation_time.txt", "a") as file: 
         file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} results: {results}\n")
-    # print(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time}")
-
-    plot_history(res, paths["progression"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
-    plot_results(res, paths["results"] + f"_{population_size}_{number_traces}_{ftol}_{plot_id}")
 
     final_cleanup(paths, population_size)
 

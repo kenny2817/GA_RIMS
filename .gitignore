@@ -9,3 +9,7 @@ diagram*/
 ignored/
 
 __pycache__
+
+cluster/parsed_results
+
+simulation_time*
