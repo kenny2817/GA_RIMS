@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt # type: ignore
 import re
 from collections import defaultdict
 
+import numpy as np
+
 def parse_log(lines):
     data = defaultdict(list)
     data = defaultdict(lambda: {"results":[], "generations": 0, "time": 0, "count": 0})
@@ -46,7 +48,7 @@ def plot_results(key, data, file_name="results_plot"):
     plt.savefig(file_name + ".png")
     plt.close()
 
-def plot_result_analysis(data, file_name="relust_analysis"):
+def plot_trc(data, file_name="cluster/parsed_results/res_trc"):
     considered_results = []
     for key, results in data.items():
         if key[1] == 50 and key[2] == 2.5e-05:
@@ -57,14 +59,86 @@ def plot_result_analysis(data, file_name="relust_analysis"):
     trc, gen, time = zip(*sorted_considered_results)
 
     plt.figure(figsize=(12, 9))
-    plt.plot(trc, gen, color="blue", label="gen")
     plt.yscale('log')
+    plt.plot(trc, gen, color="blue", label="gen")
     plt.plot(trc, time, color="red", label="time [s]")
     plt.title(f"Analysis of pop: 50 ftol: 2.5e-05")
     plt.xlabel("traces")
+    plt.xticks(trc)
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + ".png")
+    plt.savefig(file_name + "_gen_time.png")
+    plt.close()
+
+def plot_pop(data, file_name="cluster/parsed_results/res_pop"):
+    considered_results = []
+    for key, results in data.items():
+        if key[0] == 400 and key[2] == 2.5e-05:
+            considered_results.append((key[1], round(results["generations"]/results["count"], 2), round(results["time"]/results["count"], 2), results["results"]))
+
+    sorted_considered_results = sorted(considered_results, key=lambda p: p[0])
+
+    colors = [(1, 0, 0, alpha) for alpha in np.linspace(0.3, 1, len(considered_results))]
+    pop, gen, time, res = zip(*sorted_considered_results)
+
+    plt.figure(figsize=(12, 9))
+    plt.yscale('log')
+    plt.plot(pop, gen, color="blue", label="gen")
+    plt.plot(pop, time, color="red", label="time [s]")
+    plt.title(f"Analysis of trc: 400 ftol: 2.5e-05")
+    plt.xlabel("pop size")
+    plt.xticks(pop)
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(file_name + "_gen_time.png")
+    plt.close()
+
+    plt.figure(figsize=(12, 9))
+    for i, sol in enumerate(res):
+        x, y = zip(*sol)
+        plt.scatter(x, y, color=colors[i], label=f"{pop[i]}")
+    plt.title(f"Analysis of trc: 400 ftol: 2.5e-05")
+    plt.xlabel("Duration")
+    plt.ylabel("Cost")
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(file_name + "_res.png")
+    plt.close()
+
+def plot_ftol(data, file_name="cluster/parsed_results/res_ftol"):
+    considered_results = []
+    for key, results in data.items():
+        if key[0] == 400 and key[1] == 50:
+            considered_results.append((key[2], round(results["generations"]/results["count"], 2), round(results["time"]/results["count"], 2), results["results"]))
+
+    sorted_considered_results = sorted(considered_results, key=lambda p: p[0])
+
+    colors = [(1, 0, 0, alpha) for alpha in np.linspace(0.3, 1, len(considered_results))]
+    ftol, gen, time, res = zip(*sorted_considered_results)
+
+    plt.figure(figsize=(12, 9))
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.plot(ftol, gen, color="blue", label="gen")
+    plt.plot(ftol, time, color="red", label="time [s]")
+    plt.title(f"Analysis of trc: 400 pop: 50")
+    plt.xlabel("ftol")
+    plt.xticks(ftol)
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(file_name + "_gen_time.png")
+    plt.close()
+    
+    plt.figure(figsize=(12, 9))
+    for i, sol in enumerate(res):
+        x, y = zip(*sol)
+        plt.scatter(x, y, color=colors[i], label=f"{ftol[i]}")
+    plt.title(f"Analysis of trc: 400 pop: 50")
+    plt.xlabel("Duration")
+    plt.ylabel("Cost")
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(file_name + "_res.png")
     plt.close()
 
 
@@ -76,4 +150,6 @@ parsed_data = parse_log(log_lines)
 for key, data in parsed_data.items():
     plot_results(key, data, f"cluster/parsed_results/parsed_data_{key}")
 
-plot_result_analysis(parsed_data, f"cluster/parsed_results/result_analysis")
+plot_trc(parsed_data)
+plot_pop(parsed_data)
+plot_ftol(parsed_data)
