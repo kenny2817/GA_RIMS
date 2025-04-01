@@ -5,15 +5,17 @@ from collections import defaultdict
 
 import numpy as np
 
-def parse_log(lines):
-    data = defaultdict(list)
+def parse_log(file_name: str):
+    with open(file_name, "r") as f:
+        log_lines = f.readlines()
+
     data = defaultdict(lambda: {"results":[], "generations": 0, "time": 0, "count": 0})
     
     pattern = re.compile(
         r"prc: hpc trc: (\d+) gen: (\d+) pop: (\d+) ftol: ([\deE\.-]+) time: ([\d\.]+) results: (\[.*\])"
     )
     
-    for line in lines:
+    for line in log_lines:
         match = pattern.match(line)
         if match:
             trc = int(match.group(1))
@@ -24,31 +26,35 @@ def parse_log(lines):
             results = eval(match.group(6))
             
             key = (trc, pop, ftol)
-            data[key]["results"].extend(results)
+            if key not in data.keys() or len(data[key]["results"]) < len(results):
+                data[key]["results"] = results
             data[key]["generations"] += gen
             data[key]["time"] += time
             data[key]["count"] += 1
 
     return data
 
-def plot_results(key, data, file_name="results_plot"):
+def plot_results(key: tuple[str, str, str], data: dict, file_name: str):
     x, y = zip(*data["results"])
     count = data["count"]
     gen = round(data["generations"] / count, 2)
     time = round(data["time"] / count, 2)
-    legend_text = f"Total simulations: {count}\nmean generation: {gen}\nmean time: {time} s"
+    legend_text = f"mean generation: {gen}\nmean time: {time} s"
 
     plt.figure(figsize=(12, 9))
     plt.scatter(x, y, color="red")
+    # for i in range(len(x)):
+    #     plt.plot([x[i], x[i]], [min(y), y[i]], color='blue')
+    # for i in range(len(y)):
+    #     plt.plot([min(x), x[i]], [y[i], y[i]], color='green')
     plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
     plt.xlabel("Duration")
     plt.ylabel("Cost")
-    plt.grid(True)
     plt.legend([legend_text], loc="upper right", fontsize=10, frameon=True)
     plt.savefig(file_name + ".png")
     plt.close()
 
-def plot_trc(data, file_name="cluster/parsed_results/res_trc"):
+def plot_trc(data: dict, folder: str):
     considered_results = []
     for key, results in data.items():
         if key[1] == 50 and key[2] == 2.5e-05:
@@ -67,10 +73,10 @@ def plot_trc(data, file_name="cluster/parsed_results/res_trc"):
     plt.xticks(trc)
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + "_gen_time.png")
+    plt.savefig(folder + "res_trc_gen_time.png")
     plt.close()
 
-def plot_pop(data, file_name="cluster/parsed_results/res_pop"):
+def plot_pop(data, folder: str):
     considered_results = []
     for key, results in data.items():
         if key[0] == 400 and key[2] == 2.5e-05:
@@ -90,7 +96,7 @@ def plot_pop(data, file_name="cluster/parsed_results/res_pop"):
     plt.xticks(pop)
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + "_gen_time.png")
+    plt.savefig(folder + "res_pop_gen_time.png")
     plt.close()
 
     plt.figure(figsize=(12, 9))
@@ -102,10 +108,10 @@ def plot_pop(data, file_name="cluster/parsed_results/res_pop"):
     plt.ylabel("Cost")
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + "_res.png")
+    plt.savefig(folder + "res_pop_res.png")
     plt.close()
 
-def plot_ftol(data, file_name="cluster/parsed_results/res_ftol"):
+def plot_ftol(data, folder: str):
     considered_results = []
     for key, results in data.items():
         if key[0] == 400 and key[1] == 50:
@@ -114,6 +120,7 @@ def plot_ftol(data, file_name="cluster/parsed_results/res_ftol"):
     sorted_considered_results = sorted(considered_results, key=lambda p: p[0])
 
     colors = [(1, 0, 0, alpha) for alpha in np.linspace(0.3, 1, len(considered_results))]
+    # colors = ['yellow', 'orange', 'red', 'green', 'blue', 'purple', 'black']
     ftol, gen, time, res = zip(*sorted_considered_results)
 
     plt.figure(figsize=(12, 9))
@@ -126,7 +133,7 @@ def plot_ftol(data, file_name="cluster/parsed_results/res_ftol"):
     plt.xticks(ftol)
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + "_gen_time.png")
+    plt.savefig(folder + "res_ftol_gen_time.png")
     plt.close()
     
     plt.figure(figsize=(12, 9))
@@ -138,18 +145,18 @@ def plot_ftol(data, file_name="cluster/parsed_results/res_ftol"):
     plt.ylabel("Cost")
     plt.grid(True)
     plt.legend()
-    plt.savefig(file_name + "_res.png")
+    plt.savefig(folder + "res_ftol_res.png")
     plt.close()
 
 
-log_file = sys.argv[1]
-with open(log_file, "r") as f:
-    log_lines = f.readlines()
+log_file = "ignored/sim_31.txt"
+parsed_data = parse_log(log_file)
 
-parsed_data = parse_log(log_lines)
+folder = "ignored/parsed_res/"
+
 for key, data in parsed_data.items():
-    plot_results(key, data, f"cluster/parsed_results/parsed_data_{key}")
+    plot_results(key, data, f"{folder}parsed_data_{key}")
 
-plot_trc(parsed_data)
-plot_pop(parsed_data)
-plot_ftol(parsed_data)
+plot_trc(parsed_data, folder)
+plot_pop(parsed_data, folder)
+plot_ftol(parsed_data, folder)
