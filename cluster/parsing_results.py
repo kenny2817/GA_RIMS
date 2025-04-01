@@ -1,4 +1,3 @@
-import sys
 import matplotlib.pyplot as plt # type: ignore
 import re
 from collections import defaultdict
@@ -34,26 +33,28 @@ def parse_log(file_name: str):
 
     return data
 
-def plot_results(key: tuple[str, str, str], data: dict, file_name: str):
-    x, y = zip(*data["results"])
-    count = data["count"]
-    gen = round(data["generations"] / count, 2)
-    time = round(data["time"] / count, 2)
-    legend_text = f"mean generation: {gen}\nmean time: {time} s"
+def plot_results(parsed_data: dict, folder: str):
+    for key, data in parsed_data.items():
+        file_name = f"{folder}parsed_data_{key}"
+        x, y = zip(*data["results"])
+        count = data["count"]
+        gen = round(data["generations"] / count, 2)
+        time = round(data["time"] / count, 2)
+        legend_text = f"mean generation: {gen}\nmean time: {time} s"
 
-    plt.figure(figsize=(12, 9))
-    plt.scatter(x, y, color="red")
-    # for i in range(len(x)):
-    #     plt.plot([x[i], x[i]], [min(y), y[i]], color='blue')
-    # for i in range(len(y)):
-    #     plt.plot([min(x), x[i]], [y[i], y[i]], color='green')
-    plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
-    plt.xlabel("Duration")
-    plt.ylabel("Cost")
-    plt.tight_layout()
-    plt.legend([legend_text], loc="upper right", fontsize=10, frameon=True)
-    plt.savefig(file_name + ".png")
-    plt.close()
+        plt.figure(figsize=(12, 9))
+        plt.scatter(x, y, color="red")
+        # for i in range(len(x)):
+        #     plt.plot([x[i], x[i]], [min(y), y[i]], color='blue')
+        # for i in range(len(y)):
+        #     plt.plot([min(x), x[i]], [y[i], y[i]], color='green')
+        plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
+        plt.xlabel("Duration")
+        plt.ylabel("Cost")
+        plt.tight_layout()
+        plt.legend([legend_text], loc="upper right", fontsize=10, frameon=True)
+        plt.savefig(file_name + ".png")
+        plt.close()
 
 def plot_trc(data: dict, folder: str):
     considered_results = []
@@ -155,16 +156,17 @@ def plot_ftol(data, folder: str):
     plt.savefig(folder + "res_ftol_res.png")
     plt.close()
 
+if __name__ == "__main__":
+    log_file = "ignored/sim_1.txt"
+    folder = "ignored/parsed_res/"
+    
+    parsed_data = parse_log(log_file)
 
-log_file = "ignored/sim_1.txt"
-parsed_data = parse_log(log_file)
+    plot_results(parsed_data, folder)
 
-folder = "ignored/parsed_res/"
+    plot_trc(parsed_data, folder)
 
-for key, data in parsed_data.items():
-    plot_results(key, data, f"{folder}parsed_data_{key}")
+    plot_pop(parsed_data, folder, 400)
+    plot_pop(parsed_data, folder, 500)
 
-plot_trc(parsed_data, folder)
-plot_pop(parsed_data, folder, 400)
-plot_pop(parsed_data, folder, 500)
-plot_ftol(parsed_data, folder)
+    plot_ftol(parsed_data, folder)
