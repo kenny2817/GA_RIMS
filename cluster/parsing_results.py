@@ -100,7 +100,7 @@ def plot_pop(data, folder: str, trc: int):
     plt.grid(True)
     plt.tight_layout()
     plt.legend()
-    plt.savefig(folder + f"res_pop_gen_time_{trc}.png")
+    plt.savefig(f"{folder}res_pop_gen_time_{trc}.png")
     plt.close()
 
     plt.figure(figsize=(12, 9))
@@ -113,13 +113,13 @@ def plot_pop(data, folder: str, trc: int):
     plt.grid(True)
     plt.tight_layout()
     plt.legend()
-    plt.savefig(folder + f"res_pop_res_{trc}.png")
+    plt.savefig(f"{folder}res_pop_res_{trc}.png")
     plt.close()
 
-def plot_ftol(data, folder: str):
+def plot_ftol(data, folder: str, trc: int):
     considered_results = []
     for key, results in data.items():
-        if key[0] == 400 and key[1] == 50:
+        if key[0] == trc and key[1] == 50:
             considered_results.append((key[2], round(results["generations"]/results["count"], 2), round(results["time"]/results["count"], 2), results["results"]))
 
     sorted_considered_results = sorted(considered_results, key=lambda p: p[0])
@@ -140,7 +140,7 @@ def plot_ftol(data, folder: str):
     plt.tight_layout()
     plt.grid(True)
     plt.legend()
-    plt.savefig(folder + "res_ftol_gen_time.png")
+    plt.savefig(f"{folder}res_ftol_gen_time{trc}.png")
     plt.close()
     
     plt.figure(figsize=(12, 9))
@@ -153,11 +153,11 @@ def plot_ftol(data, folder: str):
     plt.grid(True)
     plt.tight_layout()
     plt.legend()
-    plt.savefig(folder + "res_ftol_res.png")
+    plt.savefig(f"{folder}res_ftol_res{trc}.png")
     plt.close()
 
 if __name__ == "__main__":
-    log_file = "ignored/sim_1.txt"
+    log_file = "ignored/sim_2.txt"
     folder = "ignored/parsed_res/"
     
     parsed_data = parse_log(log_file)
@@ -169,4 +169,5 @@ if __name__ == "__main__":
     plot_pop(parsed_data, folder, 400)
     plot_pop(parsed_data, folder, 500)
 
-    plot_ftol(parsed_data, folder)
+    plot_ftol(parsed_data, folder, 400)
+    plot_ftol(parsed_data, folder, 500)
