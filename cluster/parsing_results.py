@@ -157,7 +157,7 @@ def plot_ftol(data, folder: str, trc: int):
     plt.close()
 
 if __name__ == "__main__":
-    log_file = "ignored/sim_2.txt"
+    log_file = "ignored/sim_3.txt"
     folder = "ignored/parsed_res/"
     
     parsed_data = parse_log(log_file)

@@ -23,4 +23,4 @@ for ((i=1; i<NUMBER_JOBS; i++)); do
     echo "Submitted job $i with ID: $JOB_ID [$POPULATION_SIZE, $NUMBER_TRACES]" | tee -a $LOG_FILE
 done
 
-qstat -u quentin.meneghini
+# qstat -u quentin.meneghini

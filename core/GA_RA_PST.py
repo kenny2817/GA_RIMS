@@ -219,14 +219,23 @@ if __name__ == "__main__":
         verbose=False,
         save_history=True
     )
+    def estract_results(solutions):
+        cost, duration = zip(*solutions)
+        results = [[cost[i], duration[i]] for i in range(len(cost))]
+        return results
 
-    n_gen = len(res.history)
-    solutions = res.F
-    x, y = zip(*solutions)
-    results = [[x[i], y[i]] for i in range(len(x))]
+    if res.history:
+        n_gen = len(res.history)
+        last_execution_solutions = res.F
+        last_execution_results = estract_results(last_execution_solutions)
 
-    with open("simulation_time.txt", "a") as file: 
-        file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} results: {results}\n")
-
+        first_execution_solutions = res.history[0].pop.get("F")
+        first_execution_results = estract_results(first_execution_solutions)
+        with open("simulation_time.txt", "a") as file: 
+            file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} last results: {last_execution_results}\n")
+    else:
+        raise ValueError("there is no history")
+    
     final_cleanup(paths, population_size)
+
 

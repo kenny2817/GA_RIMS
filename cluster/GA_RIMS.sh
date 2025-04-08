@@ -1,9 +1,10 @@
 #!/bin/bash
 
-#PBS -l select=1:ncpus=20:mem=20gb
+#PBS -l select=1:ncpus=40:mem=40gb
 #PBS -q short_cpuQ
-#PBS -l walltime=02:00:00
+#PBS -l walltime=05:55:00
 #PBS -o output
+#PBS -e error
 
 module load singularity-3.4.0
 
