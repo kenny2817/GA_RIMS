@@ -4,6 +4,8 @@ FOLDER=${1:-"GA_RIMS"}
 FILE_NAME=${2:-"diagram_0"}
 
 git clone --branch cluster --single-branch https://github.com/kenny2817/GA_RIMS.git ./$FOLDER
+
+cd "$FOLDER"
 rm -r cluster/
 mkdir output
 mkdir output/output_$FILE_NAME
