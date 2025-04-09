@@ -144,6 +144,7 @@ def cleanup_directory(directory_path: str):
         os.makedirs(directory_path)
     except Exception as e:
         print(f"An error occurred: {e}")
+        
 def final_cleanup(paths: dict[str: str], population_size: int = 1):
     txt_file = paths["redirect"]
     if os.path.exists(txt_file) and os.path.isfile(txt_file):
@@ -154,6 +155,11 @@ def final_cleanup(paths: dict[str: str], population_size: int = 1):
         if os.path.exists(folder):
             shutil.rmtree(folder)
 
+def estract_results(solutions) -> list[list[float]]:
+    cost, duration = zip(*solutions)
+    results = [[cost[i], duration[i]] for i in range(len(cost))]
+    return results
+    
 if __name__ == "__main__":
     diagram_name = "diagram_4_3"
     diagram_folder_file = f"./{diagram_name}/{diagram_name}"
@@ -219,10 +225,6 @@ if __name__ == "__main__":
         verbose=False,
         save_history=True
     )
-    def estract_results(solutions):
-        cost, duration = zip(*solutions)
-        results = [[cost[i], duration[i]] for i in range(len(cost))]
-        return results
 
     if res.history:
         n_gen = len(res.history)

@@ -4,15 +4,13 @@ from collections import defaultdict
 
 import numpy as np
 
-def parse_log(file_name: str):
+def parse_log_0(file_name: str, raw_pattern: str=r"prc: hpc trc: (\d+) gen: (\d+) pop: (\d+) ftol: ([\deE\.-]+) time: ([\d\.]+) results: (\[.*\])") -> dict[tuple[str,str,str], any]:
     with open(file_name, "r") as f:
         log_lines = f.readlines()
 
     data = defaultdict(lambda: {"results":[], "generations": 0, "time": 0, "count": 0})
     
-    pattern = re.compile(
-        r"prc: hpc trc: (\d+) gen: (\d+) pop: (\d+) ftol: ([\deE\.-]+) time: ([\d\.]+) results: (\[.*\])"
-    )
+    pattern = re.compile(raw_pattern)
     
     for line in log_lines:
         match = pattern.match(line)
@@ -33,7 +31,47 @@ def parse_log(file_name: str):
 
     return data
 
-def plot_results(parsed_data: dict, folder: str):
+def parse_log_1(file_name: str, raw_pattern: str=r"prc: hpc trc: (\d+) gen: (\d+) pop: (\d+) ftol: ([\deE\.-]+) time: ([\d\.]+) first results: (\[.*\]) last results: (\[.*\])") -> dict[tuple[str,str,str], any]:
+    with open(file_name, "r") as f:
+        log_lines = f.readlines()
+
+    data = defaultdict(lambda: {"first_results":[], "last_results":[], "generations": 0, "time": 0, "count": 0})
+    
+    pattern = re.compile(raw_pattern)
+    
+    for line in log_lines:
+        match = pattern.match(line)
+        if match:
+            trc = int(match.group(1))
+            gen = int(match.group(2))
+            pop = int(match.group(3))
+            ftol = float(match.group(4))
+            time = float(match.group(5))
+            first_results = eval(match.group(6))
+            last_results = eval(match.group(7))
+            
+            key = (trc, pop, ftol)
+            if key not in data.keys() or len(data[key]["last_results"]) < len(last_results):
+                data[key]["first_results"] = first_results
+                data[key]["last_results"] = last_results
+            data[key]["generations"] += gen
+            data[key]["time"] += time
+            data[key]["count"] += 1
+
+    return data
+
+def normalize_data_0(data: dict[tuple[str,str,str], any]) -> None:
+    for key, value in data.items():
+        trc = key[0]
+        value['results'] = [(r[0]/trc, r[1]/trc) for r in value['results']]
+
+def normalize_data_1(data: dict[tuple[str,str,str], any]) -> None:
+    for key, value in data.items():
+        trc = key[0]
+        value['first_results'] = [(r[0]/trc, r[1]/trc) for r in value['first_results']]
+        value['last_results'] = [(r[0]/trc, r[1]/trc) for r in value['last_results']]
+
+def plot_results_0(parsed_data: dict, folder: str):
     for key, data in parsed_data.items():
         file_name = f"{folder}parsed_data_{key}"
         x, y = zip(*data["results"])
@@ -48,6 +86,27 @@ def plot_results(parsed_data: dict, folder: str):
         #     plt.plot([x[i], x[i]], [min(y), y[i]], color='blue')
         # for i in range(len(y)):
         #     plt.plot([min(x), x[i]], [y[i], y[i]], color='green')
+        plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
+        plt.xlabel("Duration")
+        plt.ylabel("Cost")
+        plt.tight_layout()
+        plt.legend([legend_text], loc="upper right", fontsize=10, frameon=True)
+        plt.savefig(file_name + ".png")
+        plt.close()
+
+def plot_results_1(parsed_data: dict, folder: str):
+    for key, data in parsed_data.items():
+        file_name = f"{folder}parsed_data_{key}_rnd"
+        fx, fy = zip(*data["first_results"])
+        lx, ly = zip(*data["last_results"])
+        count = data["count"]
+        gen = round(data["generations"] / count, 2)
+        time = round(data["time"] / count, 2)
+        legend_text = f"mean generation: {gen}\nmean time: {time} s"
+
+        plt.figure(figsize=(12, 9))
+        plt.scatter(fx, fy, color="red")
+        plt.scatter(lx, ly, color="blue")
         plt.title(f"Optimization Results trc: {key[0]}, pop: {key[1]}, ftol: {key[2]}")
         plt.xlabel("Duration")
         plt.ylabel("Cost")
@@ -157,17 +216,25 @@ def plot_ftol(data, folder: str, trc: int):
     plt.close()
 
 if __name__ == "__main__":
-    log_file = "ignored/sim_3.txt"
+    log_file_0 = "ignored/sim_8.txt"
+    log_file_1 = "ignored/sim_9.txt"
     folder = "ignored/parsed_res/"
+
+    parsed_data_0 = parse_log_0(log_file_0)
+    parsed_data_1 = parse_log_1(log_file_1)
+
+    normalize_data_0(parsed_data_0)
+    normalize_data_1(parsed_data_1)
+
+    plot_results_0(parsed_data_0, folder)
+    plot_results_1(parsed_data_1, folder)
+
+    plot_trc(parsed_data_0, folder)
+
+    plot_pop(parsed_data_0, folder, 400)
+    plot_pop(parsed_data_0, folder, 500)
+
+    plot_ftol(parsed_data_0, folder, 400)
+    plot_ftol(parsed_data_0, folder, 500)
+
     
-    parsed_data = parse_log(log_file)
-
-    plot_results(parsed_data, folder)
-
-    plot_trc(parsed_data, folder)
-
-    plot_pop(parsed_data, folder, 400)
-    plot_pop(parsed_data, folder, 500)
-
-    plot_ftol(parsed_data, folder, 400)
-    plot_ftol(parsed_data, folder, 500)
