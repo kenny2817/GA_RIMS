@@ -227,16 +227,26 @@ class Token(object):
             next = self.call_custom_xor_function(all_enabled_trans)
         elif prob[0] == 'GENETICA':
             next = self._params.GENETICA.choice(all_enabled_trans)
-        elif type(prob[0] == float()):
-            if self._check_probability(prob):
-                value = [*range(0, len(prob), 1)]
-                next = int(random.choices(value, prob)[0])
-            else:
-                next = random.choices(list(range(0, len(all_enabled_trans), 1)))[0]
+        else:
+            print("probability yey")
+            if type(prob[0] == float()):
+                print("probability yey")
+                if self._check_probability(prob):
+                    value = [*range(0, len(prob), 1)]
+                    next = int(random.choices(value, prob)[0])
+                else:
+                    next = random.choices(list(range(0, len(all_enabled_trans), 1)))[0]
 
-        # print("next: ", next)
+        # print("next: ", prob[0], next, len(all_enabled_trans))
         # print(all_enabled_trans)
-        return all_enabled_trans[next]
+        try:
+            next_trans = all_enabled_trans[next]
+        except Exception as i:
+            print(next, len(all_enabled_trans), all_enabled_trans, self._params.GENETICA.GENE)
+            print(type(all_enabled_trans[0]))
+            exit()
+
+        return next_trans
 
     def define_processing_time(self, activity):
         """ Three different methods are available to define the processing time for each activity:
@@ -345,11 +355,11 @@ class Token(object):
         if len(all_enabled_trans) == 0:
             return None
         elif len(all_enabled_trans) == 1:
+            # print(self._am, all_enabled_trans)
             return all_enabled_trans[0]
         else:
             if len(self._am) == 1:
                 token_name = self._am
-                # print("token name: ",token_name)
                 return self.define_xor_next_activity(all_enabled_trans)
             else:
                 events = []

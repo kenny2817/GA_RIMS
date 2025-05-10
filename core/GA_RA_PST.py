@@ -6,9 +6,9 @@ import numpy as np                              # type: ignore
 from typing import Dict, List
 from scipy.stats import trim_mean               # type: ignore
 
-from PetriNet import PetriNet
-from Parameters import Parameters
-from Bpmn import Bpmn
+from petrinet import PetriNet
+from parameters import Parameters
+from bpmn import Bpmn
 from RIMS_tool.core.run_simulation import run_simulation
 
 from pymoo.optimize import minimize             # type: ignore
@@ -25,7 +25,7 @@ class GA_RA_PST_Problem(Problem):
     def __init__(
             self,
             paths: Dict[str, str],
-            bpmn: Bpmn,
+            upper_bound: list[int],
             number_traces: int = 1,
             number_simulations: int = 1,
             mutation_threshold: float = 0.1,
@@ -44,28 +44,26 @@ class GA_RA_PST_Problem(Problem):
         self.mutation_threshold = mutation_threshold
         self.mutation_proportion = mutation_proportion
         
-        self.upper_bound_values = bpmn.get_upper_bound()
 
-        self.length_gene = len(self.upper_bound_values) * number_traces
-        if (self.length_gene < 1):
+        length_gene = len(upper_bound) * number_traces
+        if (length_gene < 1):
             raise ValueError('the lengh of the gene must be greater that 0 to have some optimization')
         
-        self.length_mutation = int(self.length_gene * mutation_proportion)
+        self.length_mutation = int(length_gene * mutation_proportion)
         if self.length_mutation < 1: self.length_mutation = 1
 
         args = {
-            "n_var": self.length_gene,                           # variable for each genoma
-            "n_obj": 2,                                     # time, cost
-            "n_constr": 0,                                  # no constraint
-            "xl": [0] * self.length_gene,                        # lower bound 0 is the base bpmn, [1,xu] are the genetic choices
-            "xu": self.upper_bound_values * number_traces   # upper bound (included)
+            "n_var": length_gene,                 # variable for each genoma
+            "n_obj": 2,                           # time, cost
+            "n_constr": 0,                        # no constraint
+            "xl": [0] * length_gene,              # lower bound 0 is the base bpmn, [1,xu] are the genetic choices
+            "xu": upper_bound * number_traces     # upper bound (included)
         }
         super().__init__(**args)
 
         self.paths = paths
-        self.bpmn = bpmn
 
-    def _evaluate(self, X: list, out, *args, **kwargs):
+    def _evaluate(self, X, out, *args, **kwargs):
         paths = self.paths
         population_size = X.shape[0]
         proportion_to_cut = 0.025
@@ -81,6 +79,7 @@ class GA_RA_PST_Problem(Problem):
         F = []
         with ProcessPoolExecutor() as executor:
             for index in range(population_size):
+                # print(X[index])
                 params["GENE"] = X[index]
                 params["NAME"] = paths["diagram_name"] + f"_index_{index}"
                 cleanup_directory(paths["output_folder"] + f"_index_{index}")
@@ -161,7 +160,7 @@ def estract_results(solutions) -> list[list[float]]:
     return results
     
 if __name__ == "__main__":
-    diagram_name = "diagram_4_3"
+    diagram_name = "diagram_5_0"
     diagram_folder_file = f"./{diagram_name}/{diagram_name}"
     output_folder = f"./output/output_{diagram_name}"
     paths = {
@@ -176,21 +175,27 @@ if __name__ == "__main__":
         "simulation_params": f"{output_folder}/simulation_parameters.json"
     }
 
-    petrinet = PetriNet(paths["bpmn_file"])
-    petrinet.save_net(paths["petrinet_file"])
+    petrinet = PetriNet(
+        input_path=paths["bpmn_file"],
+        output_path=paths["petrinet_file"]
+    )
 
-    bpmn = Bpmn(paths["bpmn_file"])
+    bpmn = Bpmn(
+        input_path=paths["bpmn_file"]
+    )
 
-    parameters = Parameters(paths["input_params"])
-    parameters.add_mapping(bpmn)
-    parameters.save(paths["simulation_params"])
+    parameters = Parameters(
+        input_path=paths["input_params"],
+        output_path=paths["simulation_params"],
+        xor_mapping=bpmn.get_xor_mapping()
+    )
 
     population_size = int(sys.argv[1])
     number_traces = int(sys.argv[2])
     plot_id = sys.argv[3]
     ftol = float(sys.argv[4])
 
-    number_simulations = 10
+    number_simulations = 1
 
     termination = DefaultMultiObjectiveTermination(
         xtol=1e-8,
@@ -203,7 +208,7 @@ if __name__ == "__main__":
 
     problem = GA_RA_PST_Problem(
         paths=paths,
-        bpmn=bpmn,
+        upper_bound=parameters.get_upper_bound(),
         number_traces=number_traces,
         number_simulations=number_simulations,
         mutation_threshold=0.1,
@@ -222,7 +227,7 @@ if __name__ == "__main__":
         problem,
         algorithm,
         termination,
-        verbose=False,
+        verbose=True,
         save_history=True
     )
 

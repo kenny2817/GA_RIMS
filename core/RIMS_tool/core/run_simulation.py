@@ -47,9 +47,7 @@ def run_simulation(PATH_PETRINET: str, PATH_PARAMETERS: str, GENE: list[int], N_
         with open("output/output_{}/simulated_log_{}_{}".format(NAME, NAME, i) + ".csv", 'w') as f:
             # params.GENETICA.reset()
             params = Parameters(PATH_PARAMETERS, GENE, N_TRACES)
-
             env = simpy.Environment()
-            # p = copy.copy(params)
             env.process(setup(env, PATH_PETRINET, params, i, NAME, f))
             env.run(until=params.SIM_TIME)
     result = Result("output_{}".format(NAME), params)
