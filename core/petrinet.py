@@ -4,7 +4,7 @@ import pm4py  # type: ignore
 from pm4py.objects.bpmn.importer import importer as bpmn_importer       # type: ignore
 from pm4py.objects.conversion.bpmn import converter as bpmn_converter   # type: ignore
                                                           
-from pydantic import BaseModel,model_validator, Field, ConfigDict # type: ignore
+from pydantic import BaseModel,model_validator, Field # type: ignore
 
 class PetriNet(BaseModel):
 
@@ -22,7 +22,6 @@ class PetriNet(BaseModel):
             raise ValueError(f"{self.input_path} doesn't exist")
         
         self.make_skip()
-        self.save_net()
         
         return self
     
@@ -33,9 +32,6 @@ class PetriNet(BaseModel):
             if 'skip' in str(t.label):
                 t.label = None
 
-    def save_net(self):
-        pm4py.write_pnml(*self.petri_net, self.output_path)
-        pm4py.vis.save_vis_petri_net(*self.petri_net, self.output_path.replace('pnml', 'png'))
 
 if __name__ == "__main__":
     p = PetriNet(
