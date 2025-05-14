@@ -166,7 +166,7 @@ class Token(object):
         else:
             return True
 
-    def _check_type_paths(self, prob):
+    def _check_type_paths(self, prob, all_enabled_trans):
         if type(prob[0]) is str:
             if sum([x == prob[0] for x in prob]) != len(prob):
                 raise ValueError('ERROR: Not all path are defined as same type ', prob)
@@ -174,17 +174,15 @@ class Token(object):
             if sum([isinstance(x, float) for x in prob]) != len(prob):
                 raise ValueError('ERROR: Not all path are defined as same type (float number) ', prob)
         else:
-            raise ValueError("ERROR: Invalid input, specify the probability as AUTO, float number or CUSTOM ", prob)
+            raise ValueError("ERROR: Invalid input, specify the probability as AUTO, float number or CUSTOM ", prob, all_enabled_trans)
 
     def _retrieve_check_paths(self, all_enabled_trans):
         prob = []
         for trans in all_enabled_trans:
             try:
                 if trans.label:
-                    # print(trans.label, end=" | ")
                     prob.append(self._params.PROBABILITY.get(trans.label))
                 else:
-                    # print(trans.name, " | ", end="")
                     prob.append(self._params.PROBABILITY.get(trans.name))
             except:
                 print('ERROR: Not all path probabilities are defined. Define all paths: ', all_enabled_trans)
@@ -219,8 +217,7 @@ class Token(object):
         ```
         """
         prob = ['AUTO'] if not self._params.PROBABILITY else self._retrieve_check_paths(all_enabled_trans)
-        # print(prob)
-        self._check_type_paths(prob)
+        self._check_type_paths(prob, all_enabled_trans)
         if prob[0] == 'AUTO':
             next = random.choices(list(range(0, len(all_enabled_trans), 1)))[0]
         elif prob[0] == 'CUSTOM':
@@ -228,9 +225,7 @@ class Token(object):
         elif prob[0] == 'GENETICA':
             next = self._params.GENETICA.choice(all_enabled_trans)
         else:
-            print("probability yey")
             if type(prob[0] == float()):
-                print("probability yey")
                 if self._check_probability(prob):
                     value = [*range(0, len(prob), 1)]
                     next = int(random.choices(value, prob)[0])
@@ -352,14 +347,13 @@ class Token(object):
         all_enabled_trans = semantics.enabled_transitions(self._net, self._am)
         all_enabled_trans = list(all_enabled_trans)
         all_enabled_trans.sort(key=lambda x: x.name)
+        # print(self._am, all_enabled_trans)
         if len(all_enabled_trans) == 0:
             return None
         elif len(all_enabled_trans) == 1:
-            # print(self._am, all_enabled_trans)
             return all_enabled_trans[0]
         else:
             if len(self._am) == 1:
-                token_name = self._am
                 return self.define_xor_next_activity(all_enabled_trans)
             else:
                 events = []

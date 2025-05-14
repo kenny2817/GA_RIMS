@@ -31,7 +31,8 @@ class Parameters(BaseModel):
                 self.data['tasks'] = to_lowercase(self.data.get('tasks', {}))
                 self.data['roles'] = to_lowercase(self.data.get('roles', {}))
                 prob: dict = self.data.get('probability', {})
-                self.data['probability'] = {k.lower(): v for k, v in prob.items()}
+                self.data['probability'] = prob
+                # self.data['probability'] = {k.lower(): v for k, v in prob.items()}
         else:
             raise ValueError(F"{self.input_path} doesn't exists")
 

@@ -21,9 +21,24 @@ class PetriNet(BaseModel):
         else:
             raise ValueError(f"{self.input_path} doesn't exist")
         
+        self.make_skip()
         self.save_net()
         
         return self
+    
+    def make_skip(self):
+        petri = self.petri_net[0]
+        trans = petri.transitions
+        for t in trans:
+            if 'skip' in str(t.label):
+                t.label = None
 
     def save_net(self):
         pm4py.write_pnml(*self.petri_net, self.output_path)
+        pm4py.vis.save_vis_petri_net(*self.petri_net, self.output_path.replace('pnml', 'png'))
+
+if __name__ == "__main__":
+    p = PetriNet(
+        input_path="diagrams/ignored/test_0.bpmn",
+        output_path="diagrams/ignored/test_0.pnml"
+    )

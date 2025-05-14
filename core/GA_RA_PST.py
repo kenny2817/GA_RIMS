@@ -159,90 +159,113 @@ def estract_results(solutions) -> list[list[float]]:
     results = [[cost[i], duration[i]] for i in range(len(cost))]
     return results
     
-if __name__ == "__main__":
-    diagram_name = "diagram_5_0"
-    diagram_folder_file = f"./{diagram_name}/{diagram_name}"
-    output_folder = f"./output/output_{diagram_name}"
-    paths = {
-        "diagram_name": diagram_name,
-        "output_folder": output_folder,
-        "redirect": f"{output_folder}/redirect.txt",
-        "output_folder_name": diagram_name,
-        "diagram_folder_file": diagram_folder_file,
-        "bpmn_file": f"{diagram_folder_file}.bpmn",
-        "petrinet_file": f"{diagram_folder_file}.pnml",
-        "input_params": f"{diagram_folder_file}.json",
-        "simulation_params": f"{output_folder}/simulation_parameters.json"
+def test():
+    params = {
+        "PATH_PETRINET": "t/test_0.pnml",
+        "PATH_PARAMETERS": "t/test_0.json",
+        "N_TRACES": 1,
+        "N_SIMULATION": 1
     }
+    params["GENE"] = []
+    params["NAME"] = "palla"
 
-    petrinet = PetriNet(
-        input_path=paths["bpmn_file"],
-        output_path=paths["petrinet_file"]
+
+    PetriNet(
+        input_path="t/test_0.bpmn",
+        output_path=params["PATH_PETRINET"]
     )
 
-    bpmn = Bpmn(
-        input_path=paths["bpmn_file"]
-    )
+    run_simulation(**params)
 
-    parameters = Parameters(
-        input_path=paths["input_params"],
-        output_path=paths["simulation_params"],
-        xor_mapping=bpmn.get_xor_mapping()
-    )
 
-    population_size = int(sys.argv[1])
-    number_traces = int(sys.argv[2])
-    plot_id = sys.argv[3]
-    ftol = float(sys.argv[4])
-
-    number_simulations = 1
-
-    termination = DefaultMultiObjectiveTermination(
-        xtol=1e-8,
-        cvtol=1e-6,
-        ftol=ftol,
-        period=30,
-        n_max_gen=10000,
-        n_max_evals=1000000
-    )
-
-    problem = GA_RA_PST_Problem(
-        paths=paths,
-        upper_bound=parameters.get_upper_bound(),
-        number_traces=number_traces,
-        number_simulations=number_simulations,
-        mutation_threshold=0.1,
-        mutation_proportion=0.1
-    )
-
-    algorithm = NSGA2(
-        pop_size=population_size,
-        sampling=IntegerRandomSampling(),
-        crossover=CustomCrossover(),
-        mutation=CustomMutation(),
-        eliminate_duplicates=True
-    )
-    
-    res = minimize(
-        problem,
-        algorithm,
-        termination,
-        verbose=True,
-        save_history=True
-    )
-
-    if res.history:
-        n_gen = len(res.history)
-        last_execution_solutions = res.F
-        last_execution_results = estract_results(last_execution_solutions)
-
-        first_execution_solutions = res.history[0].pop.get("F")
-        first_execution_results = estract_results(first_execution_solutions)
-        with open("simulation_time.txt", "a") as file: 
-            file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} last results: {last_execution_results}\n")
+if __name__ == "__main__":
+    t = False
+    if t:
+        test()
     else:
-        raise ValueError("there is no history")
-    
-    final_cleanup(paths, population_size)
+        diagram_name = "diagram_5_0"
+        diagram_folder_file = f"./{diagram_name}/{diagram_name}"
+        output_folder = f"./output/output_{diagram_name}"
+        paths = {
+            "diagram_name": diagram_name,
+            "output_folder": output_folder,
+            "redirect": f"{output_folder}/redirect.txt",
+            "output_folder_name": diagram_name,
+            "diagram_folder_file": diagram_folder_file,
+            "bpmn_file": f"{diagram_folder_file}.bpmn",
+            "petrinet_file": f"{diagram_folder_file}.pnml",
+            "input_params": f"{diagram_folder_file}.json",
+            "simulation_params": f"{output_folder}/simulation_parameters.json"
+        }
+
+        petrinet = PetriNet(
+            input_path=paths["bpmn_file"],
+            output_path=paths["petrinet_file"]
+        )
+
+        bpmn = Bpmn(
+            input_path=paths["bpmn_file"]
+        )
+
+        parameters = Parameters(
+            input_path=paths["input_params"],
+            output_path=paths["simulation_params"],
+            xor_mapping=bpmn.get_xor_mapping()
+        )
+
+        population_size = int(sys.argv[1])
+        number_traces = int(sys.argv[2])
+        plot_id = sys.argv[3]
+        ftol = float(sys.argv[4])
+
+        number_simulations = 1
+
+        termination = DefaultMultiObjectiveTermination(
+            xtol=1e-8,
+            cvtol=1e-6,
+            ftol=ftol,
+            period=30,
+            n_max_gen=10000,
+            n_max_evals=1000000
+        )
+
+        problem = GA_RA_PST_Problem(
+            paths=paths,
+            upper_bound=parameters.get_upper_bound(),
+            number_traces=number_traces,
+            number_simulations=number_simulations,
+            mutation_threshold=0.1,
+            mutation_proportion=0.1
+        )
+
+        algorithm = NSGA2(
+            pop_size=population_size,
+            sampling=IntegerRandomSampling(),
+            crossover=CustomCrossover(),
+            mutation=CustomMutation(),
+            eliminate_duplicates=True
+        )
+        
+        res = minimize(
+            problem,
+            algorithm,
+            termination,
+            verbose=True,
+            save_history=True
+        )
+
+        if res.history:
+            n_gen = len(res.history)
+            last_execution_solutions = res.F
+            last_execution_results = estract_results(last_execution_solutions)
+
+            first_execution_solutions = res.history[0].pop.get("F")
+            first_execution_results = estract_results(first_execution_solutions)
+            with open("simulation_time.txt", "a") as file: 
+                file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} last results: {last_execution_results}\n")
+        else:
+            raise ValueError("there is no history")
+        
+        final_cleanup(paths, population_size)
 
 

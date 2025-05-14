@@ -17,6 +17,7 @@ class ParallelObject(object):
         self._am_parallel = []
 
     def _set_last_events(self, am):
+        print(am)
         for token in am:
             self._am_parallel.append(token)
 
