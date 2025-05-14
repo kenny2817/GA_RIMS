@@ -2,7 +2,8 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Minimal dependencies for Singularity
-RUN apt-get update && apt-get install -y \
+RUN apt-get update
+RUN apt-get install -y \
     build-essential \
     libseccomp-dev \
     squashfs-tools \
@@ -11,7 +12,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     libgpgme-dev \
     libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    pkg-config
+RUN rm -rf /var/lib/apt/lists/* 
 
 # Install Go
 RUN curl -fsSL https://go.dev/dl/go1.21.5.linux-amd64.tar.gz | tar -xz -C /usr/local
