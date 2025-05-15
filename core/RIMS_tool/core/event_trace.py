@@ -73,9 +73,6 @@ class Token(object):
 
                 ### call predictor for waiting time
                 if trans.label in self._params.ROLE_ACTIVITY:
-                    # genetica_choice = 0
-                    # if len(self._params.ROLE_ACTIVITY[trans.label]) > 1: 
-                    #     genetica_choice = self._params.GENETICA.next_choice()
                     resource = self._process._get_resource(self._params.ROLE_ACTIVITY[trans.label][0])
                 else:
                     raise ValueError('resource/role not defined for this activity', trans.label)
@@ -216,6 +213,7 @@ class Token(object):
         }
         ```
         """
+        print(all_enabled_trans)
         prob = ['AUTO'] if not self._params.PROBABILITY else self._retrieve_check_paths(all_enabled_trans)
         self._check_type_paths(prob, all_enabled_trans)
         if prob[0] == 'AUTO':
@@ -224,13 +222,12 @@ class Token(object):
             next = self.call_custom_xor_function(all_enabled_trans)
         elif prob[0] == 'GENETICA':
             next = self._params.GENETICA.choice(all_enabled_trans)
-        else:
-            if type(prob[0] == float()):
-                if self._check_probability(prob):
-                    value = [*range(0, len(prob), 1)]
-                    next = int(random.choices(value, prob)[0])
-                else:
-                    next = random.choices(list(range(0, len(all_enabled_trans), 1)))[0]
+        elif type(prob[0] == float()):
+            if self._check_probability(prob):
+                value = [*range(0, len(prob), 1)]
+                next = int(random.choices(value, prob)[0])
+            else:
+                next = random.choices(list(range(0, len(all_enabled_trans), 1)))[0]
 
         # print("next: ", prob[0], next, len(all_enabled_trans))
         # print(all_enabled_trans)

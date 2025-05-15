@@ -18,8 +18,9 @@ class ParallelObject(object):
 
     def _set_last_events(self, am):
         # print(am)
-        for token in am:
-            self._am_parallel.append(token)
+        if am:
+            for token in am:
+                self._am_parallel.append(token)
 
     def _get_last_events(self):
         tokens = set(self._am_parallel)

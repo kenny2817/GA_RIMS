@@ -21,7 +21,7 @@ class PetriNet(BaseModel):
         else:
             raise ValueError(f"{self.input_path} doesn't exist")
         
-        # self.make_skip()
+        self.make_skip()
         self.save_net()
         
         return self
