@@ -215,26 +215,31 @@ def plot_ftol(data, folder: str, trc: int):
     plt.savefig(f"{folder}res_ftol_res{trc}.png")
     plt.close()
 
+def parse_plot_0(log_file_0: str, folder: str):
+    parsed_data_0 = parse_log_0(log_file_0)
+    normalize_data_0(parsed_data_0)
+    plot_results_0(parsed_data_0, folder)
+    plot_trc(parsed_data_0, folder)
+    plot_pop(parsed_data_0, folder, 400)
+    plot_pop(parsed_data_0, folder, 500)
+    plot_ftol(parsed_data_0, folder, 400)
+    plot_ftol(parsed_data_0, folder, 500)
+
+def parse_plot_1(log_file_1: str, folder: str):
+    parsed_data_1 = parse_log_1(log_file_1)
+    normalize_data_1(parsed_data_1)
+    plot_results_1(parsed_data_1, folder)
+
+
 if __name__ == "__main__":
     log_file_0 = "ignored/sim_8.txt"
     log_file_1 = "ignored/sim_9.txt"
-    folder = "ignored/parsed_res/"
+    log_file_2 = "ignored/sim_consulta.txt"
+    folder_0 = "ignored/parsed_res/"
+    folder_1 = "ignored/parsed_res_consulta/"
 
-    parsed_data_0 = parse_log_0(log_file_0)
-    parsed_data_1 = parse_log_1(log_file_1)
-
-    normalize_data_0(parsed_data_0)
-    normalize_data_1(parsed_data_1)
-
-    plot_results_0(parsed_data_0, folder)
-    plot_results_1(parsed_data_1, folder)
-
-    plot_trc(parsed_data_0, folder)
-
-    plot_pop(parsed_data_0, folder, 400)
-    plot_pop(parsed_data_0, folder, 500)
-
-    plot_ftol(parsed_data_0, folder, 400)
-    plot_ftol(parsed_data_0, folder, 500)
+    # parse_plot_0(log_file_0, folder_0)
+    # parse_plot_1(log_file_1, folder_0)
+    parse_plot_1(log_file_2, folder_1)
 
     

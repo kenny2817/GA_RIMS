@@ -218,7 +218,7 @@ if __name__ == "__main__":
         plot_id = sys.argv[3]
         ftol = float(sys.argv[4])
 
-        number_simulations = 1
+        number_simulations = 10
 
         termination = DefaultMultiObjectiveTermination(
             xtol=1e-8,
