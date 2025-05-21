@@ -256,7 +256,7 @@ if __name__ == "__main__":
             last_execution_results = estract_results(last_execution_solutions)
 
             first_execution_solutions = res.history[0].pop.get("F")
-            first_execution_gene = res.history[0].get["X"]
+            first_execution_gene = res.history[0].pop.get("X")
             first_execution_results = estract_results(first_execution_solutions)
             with open("simulation_time.txt", "a") as file: 
                 file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} first gene: {first_execution_gene} last results: {last_execution_results} last gene: {last_execution_gene}\n")
