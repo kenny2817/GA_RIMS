@@ -145,10 +145,6 @@ def cleanup_directory(directory_path: str):
         print(f"An error occurred: {e}")
         
 def final_cleanup(paths: dict[str: str], population_size: int = 1):
-    txt_file = paths["redirect"]
-    if os.path.exists(txt_file) and os.path.isfile(txt_file):
-            os.remove(txt_file)
-    
     for suffix in range(population_size):
         folder = paths["output_folder"] + "_index_" + str(suffix)
         if os.path.exists(folder):
@@ -189,7 +185,6 @@ if __name__ == "__main__":
         paths = {
             "diagram_name": diagram_name,
             "output_folder": output_folder,
-            "redirect": f"{output_folder}/redirect.txt",
             "output_folder_name": diagram_name,
             "diagram_folder_file": diagram_folder_file,
             "bpmn_file": f"{diagram_folder_file}.bpmn",
@@ -257,12 +252,14 @@ if __name__ == "__main__":
         if res.history:
             n_gen = len(res.history)
             last_execution_solutions = res.F
+            last_execution_gene = res.X
             last_execution_results = estract_results(last_execution_solutions)
 
             first_execution_solutions = res.history[0].pop.get("F")
+            first_execution_gene = res.history[0].get["X"]
             first_execution_results = estract_results(first_execution_solutions)
             with open("simulation_time.txt", "a") as file: 
-                file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} last results: {last_execution_results}\n")
+                file.write(f"prc: hpc trc: {number_traces} gen: {n_gen} pop: {population_size} ftol: {ftol} time: {res.exec_time} first results: {first_execution_results} first gene: {first_execution_gene} last results: {last_execution_results} last gene: {last_execution_gene}\n")
         else:
             raise ValueError("there is no history")
         

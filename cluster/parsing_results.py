@@ -226,7 +226,8 @@ def parse_plot_0(log_file_0: str, folder: str):
     plot_ftol(parsed_data_0, folder, 500)
 
 def parse_plot_1(log_file_1: str, folder: str):
-    parsed_data_1 = parse_log_1(log_file_1)
+    raw_pattern = r"prc: hpc trc: (\d+) gen: (\d+) pop: (\d+) ftol: ([\deE\.-]+) time: ([\d\.]+) first results: (\[.*\]) first gene: (\[.*\]) last results: (\[.*\]) last gene: (\[.*\])"
+    parsed_data_1 = parse_log_1(log_file_1, raw_pattern=raw_pattern)
     normalize_data_1(parsed_data_1)
     plot_results_1(parsed_data_1, folder)
 
@@ -234,9 +235,10 @@ def parse_plot_1(log_file_1: str, folder: str):
 if __name__ == "__main__":
     log_file_0 = "ignored/sim_8.txt"
     log_file_1 = "ignored/sim_9.txt"
-    log_file_2 = "ignored/sim_consulta.txt"
+    log_file_2 = "ignored/sim_consulta_0.txt"
     folder_0 = "ignored/parsed_res/"
     folder_1 = "ignored/parsed_res_consulta/"
+
 
     # parse_plot_0(log_file_0, folder_0)
     # parse_plot_1(log_file_1, folder_0)
