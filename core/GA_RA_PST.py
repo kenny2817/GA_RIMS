@@ -250,6 +250,7 @@ if __name__ == "__main__":
         )
 
         if res.history:
+            np.set_printoptions(threshold=np.inf)
             n_gen = len(res.history)
             last_execution_solutions = res.F
             last_execution_gene = res.X
