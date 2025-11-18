@@ -35,10 +35,10 @@ class PetriNet(BaseModel):
 
     def save_net(self):
         pm4py.write_pnml(*self.petri_net, self.output_path)
-        # pm4py.vis.save_vis_petri_net(*self.petri_net, self.output_path.replace('pnml', 'png'))
+        pm4py.vis.save_vis_petri_net(*self.petri_net, self.output_path.replace('pnml', 'svg'))
 
 if __name__ == "__main__":
     p = PetriNet(
-        input_path="diagrams/ignored/test_0.bpmn",
-        output_path="diagrams/ignored/test_0.pnml"
+        input_path="diagrams/diagram_4_3/diagram_4_3.bpmn",
+        output_path="diagrams/diagram_4_3/diagram_4_3.pnml"
     )

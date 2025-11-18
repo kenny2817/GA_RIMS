@@ -213,7 +213,7 @@ class Token(object):
         }
         ```
         """
-        print(all_enabled_trans)
+        # print(all_enabled_trans)
         prob = ['AUTO'] if not self._params.PROBABILITY else self._retrieve_check_paths(all_enabled_trans)
         self._check_type_paths(prob, all_enabled_trans)
         if prob[0] == 'AUTO':
